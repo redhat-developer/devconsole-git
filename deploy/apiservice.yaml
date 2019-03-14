@@ -1,0 +1,13 @@
+apiVersion: apiregistration.k8s.io/v1beta1
+kind: APIService
+metadata:
+  name: v1.kubepoc.bryzak.com
+spec:
+  insecureSkipTLSVerify: true
+  group: kubepoc.bryzak.com
+  groupPriorityMinimum: 1000
+  versionPriority: 15
+  service:
+    name: api
+    namespace: codeready-devconsole
+  version: v1
