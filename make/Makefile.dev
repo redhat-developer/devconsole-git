@@ -19,8 +19,8 @@ create-resources:
 	@oc create -f https://raw.githubusercontent.com/redhat-developer/devopsconsole-operator/master/deploy/crds/devopsconsole_v1alpha1_gitsource_crd.yaml
 	@echo "Creating Namespace"
 	@oc create -f $(DEPLOY_DIR)/namespace.yaml
-	@echo "oc project codeready-devconsole"
-	@oc project codeready-devconsole
+	@echo "oc project openshift-devops-console"
+	@oc project openshift-devops-console
 	@echo "Creating Service Account"
 	@oc create -f $(DEPLOY_DIR)/service_account.yaml
 	@echo "Granting system:auth-delegator Role"

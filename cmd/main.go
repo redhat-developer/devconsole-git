@@ -1,11 +1,11 @@
-package cmd
+package main
 
 import (
 	"flag"
 	"fmt"
 	"os"
 
-	server "github.com/sbryzak/kubepoc/pkg/cmd/server"
+	server "github.com/redhat-developer/git-service/pkg/cmd/server"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/component-base/logs"
 	//"github.com/golang/glog"

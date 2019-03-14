@@ -10,4 +10,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: apiserver
-  namespace: codeready-devconsole
+  namespace: openshift-devops-console

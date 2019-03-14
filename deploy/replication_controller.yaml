@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ReplicationController
 metadata:
   name: kubepoc-apiserver
-  namespace: codeready-devconsole
+  namespace: openshift-devops-console
   labels:
     apiserver: "true"
 spec:

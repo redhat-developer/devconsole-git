@@ -2,6 +2,5 @@ FROM centos:7
 
 RUN mkdir -p /tmp/
 ADD bin/git-service /
-RUN echo chmod +x /git-service
 
 ENTRYPOINT ["/git-service"]

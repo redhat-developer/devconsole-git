@@ -409,17 +409,6 @@
   revision = "d0f344d83b0c80a1bc03b547a2374a9ec6711144"
 
 [[projects]]
-  branch = "master"
-  digest = "1:eeff0dd69db2645c92efcb5fd8c14ac844c82e3b3539d1daa61e23765ef63d25"
-  name = "github.com/sbryzak/kubepoc"
-  packages = [
-    "pkg/apiserver",
-    "pkg/cmd/server",
-  ]
-  pruneopts = "UT"
-  revision = "8bf25754cf0c7ff86a3b0856ed156dbd82a3fbec"
-
-[[projects]]
   digest = "1:d917313f309bda80d27274d53985bc65651f81a5b66b820749ac7f8ef061fd04"
   name = "github.com/sergi/go-diff"
   packages = ["diffmatchpatch"]
@@ -1170,8 +1159,6 @@
     "github.com/MatousJobanek/build-environment-detector/detector",
     "github.com/MatousJobanek/build-environment-detector/detector/git",
     "github.com/emicklei/go-restful",
-    "github.com/sbryzak/kubepoc/pkg/apiserver",
-    "github.com/sbryzak/kubepoc/pkg/cmd/server",
     "github.com/spf13/cobra",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/runtime",

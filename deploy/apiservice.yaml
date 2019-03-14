@@ -9,5 +9,5 @@ spec:
   versionPriority: 15
   service:
     name: api
-    namespace: codeready-devconsole
+    namespace: openshift-devops-console
   version: v1
