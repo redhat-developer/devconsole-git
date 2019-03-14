@@ -1,13 +1,13 @@
 apiVersion: apiregistration.k8s.io/v1beta1
 kind: APIService
 metadata:
-  name: v1.kubepoc.bryzak.com
+  name: v1alpha1.gitservice.devopsconsole.openshift.io
 spec:
   insecureSkipTLSVerify: true
-  group: kubepoc.bryzak.com
+  group: gitservice.devopsconsole.openshift.io
   groupPriorityMinimum: 1000
   versionPriority: 15
   service:
     name: api
     namespace: openshift-devops-console
-  version: v1
+  version: v1alpha1

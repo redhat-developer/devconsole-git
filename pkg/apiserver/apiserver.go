@@ -2,9 +2,10 @@ package apiserver
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/MatousJobanek/build-environment-detector/detector"
 	"github.com/MatousJobanek/build-environment-detector/detector/git"
-	"strings"
 
 	"github.com/emicklei/go-restful"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,8 +18,8 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
-const GroupName = "kubepoc.bryzak.com"
-const GroupVersion = "v1"
+const GroupName = "gitservice.devopsconsole.openshift.io"
+const GroupVersion = "v1alpha1"
 
 var (
 	Scheme             = runtime.NewScheme()

@@ -13,7 +13,7 @@ import (
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 )
 
-const defaultEtcdPathPrefix = "/registry/kubepoc.bryzak.com"
+const defaultEtcdPathPrefix = "/registry/gitservice.devopsconsole.openshift.io"
 
 type PocServerOptions struct {
 	RecommendedOptions *genericoptions.RecommendedOptions

@@ -1,6 +1,6 @@
 ## Running Git Service on Minishift
 
-These instructions will help you run toolchain operator using MiniShift.
+These instructions will help you run the service using MiniShift.
 
 ### Prerequisites
 
@@ -80,13 +80,13 @@ make deploy-apiserver
 ```
 
 #### Creating Custom Resource
-To create Custom Resource, so that operator can start it's functioning, you can use following target:
+To create Custom Resource, so that service can start it's functioning, you can use following target:
 ```bash
 make create-cr
 ```
 
 #### Creating Resources and Deploying Git Service
-If you are too lazy, we have following target for you to create resources, build container and deploy operator:
+If you are too lazy, we have following target for you to create resources, build container and deploy service:
 
 ```bash
 make deploy-all
