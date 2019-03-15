@@ -17,8 +17,8 @@ func main() {
 	defer logs.FlushLogs()
 
 	stopCh := genericapiserver.SetupSignalHandler()
-	options := server.NewPocServerOptions(os.Stdout, os.Stderr)
-	cmd := server.NewCommandStartPocServer(options, stopCh)
+	options := server.NewGitServerOptions(os.Stdout, os.Stderr)
+	cmd := server.NewCommandStartGitServer(options, stopCh)
 	cmd.Flags().AddGoFlagSet(flag.CommandLine)
 	if err := cmd.Execute(); err != nil {
 		fmt.Println(err)

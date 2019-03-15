@@ -60,8 +60,8 @@ type Config struct {
 	ExtraConfig   ExtraConfig
 }
 
-// PocServer contains state for a Kubernetes cluster master/api server.
-type PocServer struct {
+// GitAPIServer contains state for a Kubernetes cluster master/api server.
+type GitAPIServer struct {
 	GenericAPIServer *genericapiserver.GenericAPIServer
 }
 
@@ -95,13 +95,13 @@ func (cfg *Config) Complete() CompletedConfig {
 }
 
 // New returns a new instance of ProvenanceServer from the given config.
-func (c completedConfig) New() (*PocServer, error) {
+func (c completedConfig) New() (*GitAPIServer, error) {
 	genericServer, err := c.GenericConfig.New("kube proof of concept server", genericapiserver.NewEmptyDelegate())
 	if err != nil {
 		return nil, err
 	}
 
-	s := &PocServer{
+	s := &GitAPIServer{
 		GenericAPIServer: genericServer,
 	}
 
@@ -111,12 +111,12 @@ func (c completedConfig) New() (*PocServer, error) {
 		return nil, err
 	}
 
-	installCompositionPocWebService(s)
+	installCompositionGitWebService(s)
 
 	return s, nil
 }
 
-func installCompositionPocWebService(pocServer *PocServer) {
+func installCompositionGitWebService(gitServer *GitAPIServer) {
 	path := fmt.Sprintf("/apis/%s/%s/namespaces/{namespace}", GroupName, GroupVersion)
 	fmt.Println("WS PATH:" + path)
 
@@ -133,7 +133,7 @@ func installCompositionPocWebService(pocServer *PocServer) {
 	fmt.Println("Detect Path:" + detectPath)
 	ws.Route(ws.POST(detectPath).To(detectResponse))
 
-	pocServer.GenericAPIServer.Handler.GoRestfulContainer.Add(ws)
+	gitServer.GenericAPIServer.Handler.GoRestfulContainer.Add(ws)
 	fmt.Println("Done registering.")
 }
 

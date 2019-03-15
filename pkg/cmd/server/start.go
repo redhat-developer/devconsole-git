@@ -15,14 +15,14 @@ import (
 
 const defaultEtcdPathPrefix = "/registry/gitservice.devopsconsole.openshift.io"
 
-type PocServerOptions struct {
+type GitServerOptions struct {
 	RecommendedOptions *genericoptions.RecommendedOptions
 	StdOut             io.Writer
 	StdErr             io.Writer
 }
 
-func NewPocServerOptions(out, errOut io.Writer) *PocServerOptions {
-	o := &PocServerOptions{
+func NewGitServerOptions(out, errOut io.Writer) *GitServerOptions {
+	o := &GitServerOptions{
 		RecommendedOptions: genericoptions.NewRecommendedOptions(defaultEtcdPathPrefix,
 			apiserver.Codecs.LegacyCodec(apiserver.SchemeGroupVersion), nil),
 		StdOut: out,
@@ -31,13 +31,13 @@ func NewPocServerOptions(out, errOut io.Writer) *PocServerOptions {
 	return o
 }
 
-// NewCommandStartPocServer provides a CLI handler for 'start master' command
-// with a default PocServerOptions.
-func NewCommandStartPocServer(defaults *PocServerOptions, stopCh <-chan struct{}) *cobra.Command {
+// NewCommandStartGitServer provides a CLI handler for 'start master' command
+// with a default GitServerOptions.
+func NewCommandStartGitServer(defaults *GitServerOptions, stopCh <-chan struct{}) *cobra.Command {
 	o := *defaults
 	cmd := &cobra.Command{
-		Short: "Launch Poc API server",
-		Long:  "Launch Poc API server",
+		Short: "Launch Git API server",
+		Long:  "Launch Git API server",
 		RunE: func(c *cobra.Command, args []string) error {
 			if err := o.Complete(); err != nil {
 				return err
@@ -45,7 +45,7 @@ func NewCommandStartPocServer(defaults *PocServerOptions, stopCh <-chan struct{}
 			if err := o.Validate(args); err != nil {
 				return err
 			}
-			if err := o.RunPocServer(stopCh); err != nil {
+			if err := o.RunGitServer(stopCh); err != nil {
 				return err
 			}
 			return nil
@@ -58,17 +58,17 @@ func NewCommandStartPocServer(defaults *PocServerOptions, stopCh <-chan struct{}
 	return cmd
 }
 
-func (o PocServerOptions) Validate(args []string) error {
+func (o GitServerOptions) Validate(args []string) error {
 	errors := []error{}
 	errors = append(errors, o.RecommendedOptions.Validate()...)
 	return utilerrors.NewAggregate(errors)
 }
 
-func (o *PocServerOptions) Complete() error {
+func (o *GitServerOptions) Complete() error {
 	return nil
 }
 
-func (o *PocServerOptions) Config() (*apiserver.Config, error) {
+func (o *GitServerOptions) Config() (*apiserver.Config, error) {
 	// TODO have a "real" external address
 	if err := o.RecommendedOptions.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", nil, []net.IP{net.ParseIP("127.0.0.1")}); err != nil {
 		return nil, fmt.Errorf("error creating self-signed certificates: %v", err)
@@ -86,7 +86,7 @@ func (o *PocServerOptions) Config() (*apiserver.Config, error) {
 	return config, nil
 }
 
-func (o PocServerOptions) RunPocServer(stopCh <-chan struct{}) error {
+func (o GitServerOptions) RunGitServer(stopCh <-chan struct{}) error {
 	config, err := o.Config()
 	if err != nil {
 		return err
