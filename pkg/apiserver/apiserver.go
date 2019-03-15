@@ -94,9 +94,9 @@ func (cfg *Config) Complete() CompletedConfig {
 	return CompletedConfig{&c}
 }
 
-// New returns a new instance of ProvenanceServer from the given config.
+// New returns a new instance of GitAPIServer from the given config.
 func (c completedConfig) New() (*GitAPIServer, error) {
-	genericServer, err := c.GenericConfig.New("kube proof of concept server", genericapiserver.NewEmptyDelegate())
+	genericServer, err := c.GenericConfig.New("DevOps Console Git API Server", genericapiserver.NewEmptyDelegate())
 	if err != nil {
 		return nil, err
 	}

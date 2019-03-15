@@ -9,7 +9,7 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/component-base/logs"
 	//"github.com/golang/glog"
-	//"k8s.io/apiserver/pkg/util/logs"
+	//"k8s.io/apiserver/pkg/util/logs
 )
 
 func main() {

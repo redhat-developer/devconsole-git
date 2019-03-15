@@ -267,6 +267,6 @@ clean: $(CLEAN_TARGETS)
 
 .PHONY: build
 ## Build git service
-build: prebuild-check deps
+build: prebuild-check deps check-go-format
 	@echo "building $(BINARY_SERVER_BIN)..."
 	go build -v -o $(BINARY_SERVER_BIN) pkg/cmd/main.go
