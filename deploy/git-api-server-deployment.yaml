@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: git-service
+  namespace: openshift-devops-console
+  labels:
+    apiserver: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: git-service
+    apiserver: "true"
+  template:
+    metadata:
+      labels:
+        name: git-service
+        apiserver: "true"
+    spec:
+      serviceAccountName: gitapiserver
+      containers:
+        - name: git-service
+          # Replace this with the built image name
+          image: quay.io/openshiftio/git-service:dev
+          imagePullPolicy: Always
+          command: [ "/git-service", "--etcd-servers=http://localhost:2379" ]
+          volumeMounts:
+            - mountPath: /tmp/kube-apiserver-audit.log
+              name: audit-log
+          env:
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+        - name: etcd
+          image: quay.io/coreos/etcd:v3.2.18
+      volumes:
+        - name: audit-log
+          hostPath:
+            path: /tmp/kube-apiserver-audit.log
+            type: FileOrCreate
