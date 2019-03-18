@@ -9,5 +9,5 @@ roleRef:
   name: extension-apiserver-authentication-reader
 subjects:
 - kind: ServiceAccount
-  name: apiserver
+  name: gitapiserver
   namespace: openshift-devops-console

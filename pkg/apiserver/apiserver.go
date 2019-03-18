@@ -6,6 +6,7 @@ import (
 
 	"github.com/MatousJobanek/build-environment-detector/detector"
 	"github.com/MatousJobanek/build-environment-detector/detector/git"
+	"k8s.io/component-base/logs"
 
 	"github.com/emicklei/go-restful"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,6 +28,8 @@ var (
 	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
 	AddToScheme        = SchemeBuilder.AddToScheme
 	SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: GroupVersion}
+
+	log = logs.NewLogger("git-api-server: ")
 )
 
 func addKnownTypes(scheme *runtime.Scheme) error {
@@ -118,7 +121,7 @@ func (c completedConfig) New() (*GitAPIServer, error) {
 
 func installCompositionGitWebService(gitServer *GitAPIServer) {
 	path := fmt.Sprintf("/apis/%s/%s/namespaces/{namespace}", GroupName, GroupVersion)
-	fmt.Println("WS PATH:" + path)
+	log.Println("WS PATH:" + path)
 
 	ws := getWebService()
 	ws.Path(path).
@@ -126,15 +129,15 @@ func installCompositionGitWebService(gitServer *GitAPIServer) {
 		Produces(restful.MIME_JSON, restful.MIME_XML)
 
 	testPath := "/{resource-id}/test"
-	fmt.Println("Test Path:" + testPath)
+	log.Println("Test Path:" + testPath)
 	ws.Route(ws.GET(testPath).To(testResponse))
 
 	detectPath := "/detect"
-	fmt.Println("Detect Path:" + detectPath)
+	log.Println("Detect Path:" + detectPath)
 	ws.Route(ws.POST(detectPath).To(detectResponse))
 
 	gitServer.GenericAPIServer.Handler.GoRestfulContainer.Add(ws)
-	fmt.Println("Done registering.")
+	log.Println("Done registering.")
 }
 
 func getWebService() *restful.WebService {
@@ -147,7 +150,7 @@ func getWebService() *restful.WebService {
 }
 
 func testResponse(request *restful.Request, response *restful.Response) {
-	fmt.Println("Handling request...")
+	log.Println("Handling request...")
 	resourceName := request.PathParameter("resource-id")
 	requestPath := request.Request.URL.Path
 	resourcePathSlice := strings.Split(requestPath, "/")
@@ -157,7 +160,7 @@ func testResponse(request *restful.Request, response *restful.Response) {
 }
 
 func detectResponse(request *restful.Request, response *restful.Response) {
-	fmt.Println("Handling request...")
+	log.Println("Handling request...")
 
 	gitSource := &GitSource{}
 
@@ -166,7 +169,7 @@ func detectResponse(request *restful.Request, response *restful.Response) {
 		response.Write([]byte((err.Error())))
 	}
 
-	fmt.Println("Detecting git source: " + gitSource.Source)
+	log.Println("Detecting git source: " + gitSource.Source)
 
 	src := &git.Source{
 		URL:    gitSource.Source,

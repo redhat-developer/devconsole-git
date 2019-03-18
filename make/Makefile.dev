@@ -42,7 +42,7 @@ build-image:
 .PHONY: deploy-apiserver-only
 deploy-apiserver-only:
 	@echo "Creating Replication Controller for API Server"
-	@cat minishift/replication_controller.yaml | sed s/\:dev/:$(TAG)/ | oc create -f -
+	@cat minishift/git-api-server-deployment.yaml | sed s/\:dev/:$(TAG)/ | oc create -f -
 	@echo "Creating Service"
 	@oc create -f $(DEPLOY_DIR)/service.yaml
 	@echo "Creating API Service"
@@ -54,7 +54,7 @@ clean-all:  clean-apiserver clean-resources
 .PHONY: clean-apiserver
 clean-apiserver:
 	@echo "Deleting Replication Controller for API Server"
-	@cat minishift/replication_controller.yaml | sed s/\:dev/:$(TAG)/ | oc delete -f - || true
+	@cat minishift/git-api-server-deployment.yaml | sed s/\:dev/:$(TAG)/ | oc delete -f - || true
 	@echo "Deleting Service"
 	@oc delete -f $(DEPLOY_DIR)/service.yaml || true
 	@echo "Deleting API Service"

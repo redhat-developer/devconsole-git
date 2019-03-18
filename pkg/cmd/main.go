@@ -2,15 +2,14 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 
 	server "github.com/redhat-developer/git-service/pkg/cmd/server"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/component-base/logs"
-	//"github.com/golang/glog"
-	//"k8s.io/apiserver/pkg/util/logs
 )
+
+var log = logs.NewLogger("git-api-server: ")
 
 func main() {
 	logs.InitLogs()
@@ -21,7 +20,6 @@ func main() {
 	cmd := server.NewCommandStartGitServer(options, stopCh)
 	cmd.Flags().AddGoFlagSet(flag.CommandLine)
 	if err := cmd.Execute(); err != nil {
-		fmt.Println(err)
-		//glog.Fatal(err)
+		log.Fatal(err)
 	}
 }

@@ -8,5 +8,5 @@ roleRef:
   name: cluster-admin
 subjects:
 - kind: ServiceAccount
-  name: apiserver
+  name: gitapiserver
   namespace: openshift-devops-console
