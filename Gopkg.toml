@@ -24,19 +24,6 @@
 #   go-tests = true
 #   unused-packages = true
 
-
-[[constraint]]
-  branch = "master"
-  name = "k8s.io/apiserver"
-
-[[constraint]]
-  branch = "master"
-  name = "k8s.io/component-base"
-
 [prune]
   go-tests = true
   unused-packages = true
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/MatousJobanek/build-environment-detector"
