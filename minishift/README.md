@@ -8,7 +8,7 @@ These instructions will help you run the service using MiniShift.
 
 [oc 3.11.0](https://docs.okd.io/latest/cli_reference/get_started_cli.html#installing-the-cli)
 
-[KVM Hypervisor](https://www.linux-kvm.org/page/Downloads)
+[KVM Hypervisor (for Linux)](https://www.linux-kvm.org/page/Downloads)
 
 #### Install Minishift
 
@@ -22,7 +22,11 @@ minishift version
 ```
 
 #### Install oc
-Please install and set up oc on your machine by visiting [oc](https://docs.okd.io/latest/cli_reference/get_started_cli.html#installing-the-cli)
+Install and set up [oc](https://docs.okd.io/latest/cli_reference/get_started_cli.html#installing-the-cli) on your machine:
+
+```bash
+eval $(minishift oc-env)
+```
 
 Verify installation by running following command, you should get version number.
 ```bash
@@ -64,7 +68,7 @@ eval $(minishift docker-env)
 
 After running this, you can verify all containers running container inside minishift using `docker ps`.
 
-**Note**: If you miss this, docker daemon inside minishift couldn't find latest built image which causes `ImagePullBackOff` as we are using `ImagePullPolicy: IfNotPresent`
+**Note**: If you miss this, docker daemon inside minishift will not find the latest image, causing an `ImagePullBackOff` as we are using `ImagePullPolicy: IfNotPresent`
 
 
 ### Creating resources required to run Git Service
