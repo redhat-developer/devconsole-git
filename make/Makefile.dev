@@ -20,10 +20,6 @@ create-resources:
 	@echo "Creating Namespace"
 	@oc create -f $(DEPLOY_DIR)/namespace.yaml
 
-.PHONY: create-cr
-create-cr:
-	@echo "Creating Custom Resource..."
-
 .PHONY: build-image
 build-image:
 	docker build -t $(DOCKER_REPO)/$(IMAGE_NAME):$(TAG) -f Dockerfile.dev .
@@ -57,4 +53,4 @@ minishift-start:
 	-eval `minishift docker-env` && oc login -u system:admin
 
 .PHONY: deploy-all
-deploy-all: clean-resources create-resources deps prebuild-check deploy-apiserver create-cr
+deploy-all: clean-resources create-resources deps prebuild-check deploy-apiserver

@@ -79,12 +79,6 @@ To build docker image and create deployment you can use following target:
 make deploy-apiserver
 ```
 
-#### Creating Custom Resource
-To create Custom Resource, so that service can start it's functioning, you can use following target:
-```bash
-make create-cr
-```
-
 #### Creating Resources and Deploying Git Service
 If you are too lazy, we have following target for you to create resources, build container and deploy service:
 
