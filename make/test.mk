@@ -22,10 +22,6 @@
 #
 #     $ make coverage-unit
 #
-# To generate unit-test HTML representation of coverage profile (opens a browser), type
-#
-#     $ make coverage-unit-html
-#
 # To output all coverage profile information for each function, type
 #
 #     $ make coverage-all
@@ -207,23 +203,6 @@ coverage-all: prebuild-check clean-coverage-overall $(COV_PATH_OVERALL)
 	$(call cleanup-coverage-file,$(COV_PATH_OVERALL))
 	@go tool cover -func=$(COV_PATH_OVERALL)
 	$(call package-coverage,*)
-
-# HTML coverage output:
-
-# Generate HTML representation (and show in browser) of coverage profile (based on unit tests).
-# Re-runs unit tests if coverage information is outdated.
-.PHONY: coverage-unit-html
-## Runs the unit tests with producing coverage html for each package
-coverage-unit-html: prebuild-check $(COV_PATH_UNIT)
-	$(call cleanup-coverage-file,$(COV_PATH_UNIT))
-	@go tool cover -html=$(COV_PATH_UNIT)
-
-.PHONY: coverage-all-html
-# Output coverage profile information for each function.
-# Re-runs unit if coverage information is outdated.
-coverage-all-html: prebuild-check clean-coverage-overall $(COV_PATH_OVERALL)
-	$(call cleanup-coverage-file,$(COV_PATH_OVERALL))
-	@go tool cover -html=$(COV_PATH_OVERALL)
 
 # Experimental:
 
