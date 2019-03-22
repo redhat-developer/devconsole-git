@@ -24,6 +24,12 @@
 #   go-tests = true
 #   unused-packages = true
 
+required = [
+  "github.com/golang/lint/golint",
+  "github.com/jstemmer/go-junit-report",
+  "github.com/wadey/gocovmerge"
+]
+
 [prune]
   go-tests = true
   unused-packages = true
