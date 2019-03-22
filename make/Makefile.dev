@@ -25,15 +25,15 @@ build-image:
 	docker build -t $(DOCKER_REPO)/$(IMAGE_NAME):$(TAG) -f Dockerfile.dev .
 	docker tag $(DOCKER_REPO)/$(IMAGE_NAME):$(TAG) $(DOCKER_REPO)/$(IMAGE_NAME):test
 
-.PHONY: deploy-apiserver-only
-deploy-apiserver-only:
-	@echo "Creating API Server..."
+.PHONY: deploy-gitserver-only
+deploy-gitserver-only:
+	@echo "Creating Git Server..."
 
 .PHONY: clean-all
-clean-all:  clean-apiserver clean-resources
+clean-all:  clean-gitserver clean-resources
 
-.PHONY: clean-apiserver
-clean-apiserver:
+.PHONY: clean-gitserver
+clean-gitserver:
 	@echo "Deleting API Server..."
 
 .PHONY: clean-resources
@@ -44,8 +44,8 @@ clean-resources:
 	@echo "Deleting CRDs..."
 	@oc delete -f https://raw.githubusercontent.com/redhat-developer/devopsconsole-operator/master/deploy/crds/devopsconsole_v1alpha1_gitsource_crd.yaml || true
 
-.PHONY: deploy-apiserver
-deploy-apiserver: build build-image deploy-apiserver-only
+.PHONY: deploy-gitserver
+deploy-gitserver: build build-image deploy-gitserver-only
 
 .PHONY: minishift-start
 minishift-start:
@@ -53,4 +53,4 @@ minishift-start:
 	-eval `minishift docker-env` && oc login -u system:admin
 
 .PHONY: deploy-all
-deploy-all: clean-resources create-resources deps prebuild-check deploy-apiserver
+deploy-all: clean-resources create-resources deps prebuild-check deploy-gitserver

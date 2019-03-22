@@ -76,7 +76,7 @@ make create-resources
 #### Build and Deploy Git Service
 To build docker image and create deployment you can use following target:
 ```bash
-make deploy-apiserver
+make deploy-gitserver
 ```
 
 #### Creating Resources and Deploying Git Service
@@ -91,7 +91,7 @@ make deploy-all
 ##### Cleaning Git Service
 This removes git service.
 ```bash
-make clean-apiserver
+make clean-gitserver
 ```
 
 ##### Cleaning Resources Created to run Git Service
@@ -113,5 +113,5 @@ special target for it which will do that for you.
 It won't create all other existing resources again. It'll build container and deploy git service only.
 
 ```bash
-make deploy-apiserver
+make deploy-gitserver
 ```
