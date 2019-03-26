@@ -19,6 +19,7 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/spf13/pflag"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -77,7 +78,9 @@ func main() {
 	ctx := context.TODO()
 
 	// Become the leader before proceeding
+
 	err = leader.Become(ctx, "git-operator-lock")
+
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)

@@ -1,0 +1,7 @@
+apiVersion: developer.redhat.com/v1alpha1
+kind: GitPush
+metadata:
+  name: example-gitpush
+spec:
+  # Add fields here
+  size: 3
