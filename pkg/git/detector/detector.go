@@ -1,13 +1,13 @@
 package detector
 
 import (
-	"fmt"
 	"github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1"
 	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
 	"regexp"
 	"sync"
 
+	"github.com/redhat-developer/git-service/pkg/git/repository/generic"
 	"github.com/redhat-developer/git-service/pkg/git/repository/github"
 )
 
@@ -25,7 +25,10 @@ func detectBuildEnvs(gitSource *v1alpha1.GitSource, secret git.Secret, serviceCr
 		return nil, err
 	}
 	if service == nil {
-		return nil, fmt.Errorf("no service found")
+		service, err = generic.NewRepositoryService(gitSource, secret)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return detectBuildEnvsUsingService(service)
 }
