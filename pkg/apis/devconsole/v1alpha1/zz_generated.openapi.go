@@ -13,9 +13,79 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
+		"github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1.GitPush":         schema_pkg_apis_devconsole_v1alpha1_GitPush(ref),
+		"github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1.GitPushSpec":     schema_pkg_apis_devconsole_v1alpha1_GitPushSpec(ref),
+		"github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1.GitPushStatus":   schema_pkg_apis_devconsole_v1alpha1_GitPushStatus(ref),
 		"github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1.GitSource":       schema_pkg_apis_devconsole_v1alpha1_GitSource(ref),
 		"github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1.GitSourceSpec":   schema_pkg_apis_devconsole_v1alpha1_GitSourceSpec(ref),
 		"github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1.GitSourceStatus": schema_pkg_apis_devconsole_v1alpha1_GitSourceStatus(ref),
+	}
+}
+
+func schema_pkg_apis_devconsole_v1alpha1_GitPush(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "GitPush is the Schema for the gitpushes API",
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1.GitPushSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1.GitPushStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1.GitPushSpec", "github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1.GitPushStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_devconsole_v1alpha1_GitPushSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "GitPushSpec defines the desired state of GitPush",
+				Properties:  map[string]spec.Schema{},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
+func schema_pkg_apis_devconsole_v1alpha1_GitPushStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "GitPushStatus defines the observed state of GitPush",
+				Properties:  map[string]spec.Schema{},
+			},
+		},
+		Dependencies: []string{},
 	}
 }
 
@@ -67,10 +137,68 @@ func schema_pkg_apis_devconsole_v1alpha1_GitSourceSpec(ref common.ReferenceCallb
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "GitSourceSpec defines the desired state of GitSource",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"url": {
+						SchemaProps: spec.SchemaProps{
+							Description: "URL of the git repo",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"ref": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Ref is a git reference. Optional. \"master\" is used by default.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"contextDir": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ContextDir is a path to subfolder in the repo. Optional.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"httpProxy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "HttpProxy is optional.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"httpsProxy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "HttpsProxy is optional.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"noProxy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NoProxy can be used to specify domains for which no proxying should be performed. Optional.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"secretRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SecretRef refers to the secret that contains credentials to access the git repo. Optional.",
+							Ref:         ref("github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1.SecretRef"),
+						},
+					},
+					"flavor": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Flavor of the git provider like github, gitlab, bitbucket, generic, etc. Optional.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"url"},
 			},
 		},
-		Dependencies: []string{},
+		Dependencies: []string{
+			"github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1.SecretRef"},
 	}
 }
 

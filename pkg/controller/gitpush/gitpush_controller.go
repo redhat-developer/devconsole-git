@@ -3,7 +3,7 @@ package gitpush
 import (
 	"context"
 
-	developerv1alpha1 "github.com/redhat-developer/git-service/pkg/apis/developer/v1alpha1"
+	devconsolev1alpha1 "github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -47,7 +47,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource GitPush
-	err = c.Watch(&source.Kind{Type: &developerv1alpha1.GitPush{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &devconsolev1alpha1.GitPush{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to secondary resource Pods and requeue the owner GitPush
 	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &developerv1alpha1.GitPush{},
+		OwnerType:    &devconsolev1alpha1.GitPush{},
 	})
 	if err != nil {
 		return err
@@ -87,7 +87,7 @@ func (r *ReconcileGitPush) Reconcile(request reconcile.Request) (reconcile.Resul
 	reqLogger.Info("Reconciling GitPush")
 
 	// Fetch the GitPush instance
-	instance := &developerv1alpha1.GitPush{}
+	instance := &devconsolev1alpha1.GitPush{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -130,7 +130,7 @@ func (r *ReconcileGitPush) Reconcile(request reconcile.Request) (reconcile.Resul
 }
 
 // newPodForCR returns a busybox pod with the same name/namespace as the cr
-func newPodForCR(cr *developerv1alpha1.GitPush) *corev1.Pod {
+func newPodForCR(cr *devconsolev1alpha1.GitPush) *corev1.Pod {
 	labels := map[string]string{
 		"app": cr.Name,
 	}

@@ -2,9 +2,9 @@ apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   creationTimestamp: null
-  name: gitpushes.developer.redhat.com
+  name: gitpushes.devconsole.openshift.io
 spec:
-  group: developer.redhat.com
+  group: devconsole.openshift.io
   names:
     kind: GitPush
     listKind: GitPushList
