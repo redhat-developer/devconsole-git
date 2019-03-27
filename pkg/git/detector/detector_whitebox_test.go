@@ -75,6 +75,24 @@ func XTestGitHubDetectorWithUsernameAndPassword(t *testing.T) {
 	printBuildEnvStats(buildEnvStats)
 }
 
+func XTestGitLabDetectorWithToken(t *testing.T) {
+
+	glSource := test.NewGitSource(test.WithURL("https://gitlab.com/gitlab-org/gitlab-qa"))
+
+	buildEnvStats, err := DetectBuildEnvironments(glSource, git.NewOauthToken([]byte("")))
+	require.NoError(t, err)
+	printBuildEnvStats(buildEnvStats)
+}
+
+func XTestGitLabDetectorWithUsernamePassword(t *testing.T) {
+
+	glSource := test.NewGitSource(test.WithURL("https://gitlab.com/gitlab-org/gitlab-qa"))
+
+	buildEnvStats, err := DetectBuildEnvironments(glSource, git.NewUsernamePassword("anonymous", ""))
+	require.NoError(t, err)
+	printBuildEnvStats(buildEnvStats)
+}
+
 func printBuildEnvStats(buildEnvStats *BuildEnvStats) {
 	fmt.Println(buildEnvStats.SortedLanguages)
 	for _, build := range buildEnvStats.DetectedBuildTools {
