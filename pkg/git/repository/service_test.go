@@ -22,7 +22,7 @@ func TestNewServiceReturnsCorrectService(t *testing.T) {
 	}
 
 	// when
-	service, err := repository.NewService(source, creators)
+	service, err := repository.NewGitService(source, creators)
 
 	// then
 	require.NoError(t, err)
@@ -39,7 +39,7 @@ func TestNewServiceReturnsNilService(t *testing.T) {
 	}
 
 	// when
-	service, err := repository.NewService(source, creators)
+	service, err := repository.NewGitService(source, creators)
 
 	// then
 	require.NoError(t, err)
@@ -54,7 +54,7 @@ func TestNewServiceReturnsError(t *testing.T) {
 	}
 
 	// when
-	service, err := repository.NewService(source, creators)
+	service, err := repository.NewGitService(source, creators)
 
 	// then
 	require.Error(t, err)

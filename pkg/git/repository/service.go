@@ -4,14 +4,14 @@ import (
 	"github.com/redhat-developer/git-service/pkg/git"
 )
 
-type Service interface {
+type GitService interface {
 	GetListOfFilesInRootDir() ([]string, error)
 	GetLanguageList() ([]string, error)
 }
 
-type ServiceCreator func(gitSource *git.Source) (Service, error)
+type ServiceCreator func(gitSource *git.Source) (GitService, error)
 
-func NewService(gitSource *git.Source, serviceCreators []ServiceCreator) (Service, error) {
+func NewGitService(gitSource *git.Source, serviceCreators []ServiceCreator) (GitService, error) {
 
 	for _, creator := range serviceCreators {
 		detector, err := creator(gitSource)

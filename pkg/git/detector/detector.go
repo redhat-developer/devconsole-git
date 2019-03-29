@@ -19,7 +19,7 @@ func DetectBuildEnvironments(gitSource *git.Source) (*BuildEnvStats, error) {
 }
 
 func detectBuildEnvs(gitSource *git.Source, serviceCreators []repository.ServiceCreator) (*BuildEnvStats, error) {
-	service, err := repository.NewService(gitSource, serviceCreators)
+	service, err := repository.NewGitService(gitSource, serviceCreators)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +29,7 @@ func detectBuildEnvs(gitSource *git.Source, serviceCreators []repository.Service
 	return detectBuildEnvsUsingService(service)
 }
 
-func detectBuildEnvsUsingService(service repository.Service) (*BuildEnvStats, error) {
+func detectBuildEnvsUsingService(service repository.GitService) (*BuildEnvStats, error) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	detectedBuildTools := make(chan *DetectedBuildTool, len(BuildTools))
@@ -61,7 +61,7 @@ func detectBuildEnvsUsingService(service repository.Service) (*BuildEnvStats, er
 	}, nil
 }
 
-func detectBuildEnvironments(service repository.Service, detectedBuildTools chan *DetectedBuildTool) error {
+func detectBuildEnvironments(service repository.GitService, detectedBuildTools chan *DetectedBuildTool) error {
 	var wg sync.WaitGroup
 	wg.Add(len(BuildTools))
 

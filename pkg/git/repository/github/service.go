@@ -21,7 +21,7 @@ type RepositoryService struct {
 }
 
 func NewRepoServiceIfMatches() repository.ServiceCreator {
-	return func(gitSource *git.Source) (repository.Service, error) {
+	return func(gitSource *git.Source) (repository.GitService, error) {
 		endpoint, err := gittransport.NewEndpoint(gitSource.URL)
 		if err != nil {
 			return nil, err
