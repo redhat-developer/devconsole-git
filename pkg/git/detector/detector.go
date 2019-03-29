@@ -36,7 +36,7 @@ func detectBuildEnvsUsingService(service repository.GitService) (*BuildEnvStats,
 	var detectionErr error
 	go func() {
 		defer wg.Done()
-		detectionErr = detectBuildEnvironments(service, detectedBuildTools)
+		detectionErr = detectBuildTools(service, detectedBuildTools)
 	}()
 
 	languageList, err := service.GetLanguageList()
@@ -61,7 +61,7 @@ func detectBuildEnvsUsingService(service repository.GitService) (*BuildEnvStats,
 	}, nil
 }
 
-func detectBuildEnvironments(service repository.GitService, detectedBuildTools chan *DetectedBuildTool) error {
+func detectBuildTools(service repository.GitService, detectedBuildTools chan *DetectedBuildTool) error {
 	var wg sync.WaitGroup
 	wg.Add(len(BuildTools))
 
