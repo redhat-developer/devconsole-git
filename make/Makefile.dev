@@ -16,7 +16,7 @@ create-resources:
 	@oc login -u system:admin
 	@echo "Creating sub resources..."
 	@echo "Creating CRDs..."
-	@oc create -f https://raw.githubusercontent.com/redhat-developer/devopsconsole-operator/master/deploy/crds/devopsconsole_v1alpha1_gitsource_crd.yaml
+	@oc create -f https://raw.githubusercontent.com/redhat-developer/devconsole-operator/master/deploy/crds/devopsconsole_v1alpha1_gitsource_crd.yaml
 	@echo "Creating Namespace"
 	@oc create -f $(DEPLOY_DIR)/namespace.yaml
 
@@ -42,7 +42,7 @@ clean-resources:
 	@echo "Deleting Namespace"
 	@oc delete -f $(DEPLOY_DIR)/namespace.yaml || true
 	@echo "Deleting CRDs..."
-	@oc delete -f https://raw.githubusercontent.com/redhat-developer/devopsconsole-operator/master/deploy/crds/devopsconsole_v1alpha1_gitsource_crd.yaml || true
+	@oc delete -f https://raw.githubusercontent.com/redhat-developer/devconsole-operator/master/deploy/crds/devopsconsole_v1alpha1_gitsource_crd.yaml || true
 
 .PHONY: deploy-gitserver
 deploy-gitserver: build build-image deploy-gitserver-only
