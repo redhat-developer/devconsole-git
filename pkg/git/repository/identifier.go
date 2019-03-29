@@ -3,7 +3,7 @@ package repository
 import (
 	"errors"
 	"fmt"
-	"github.com/redhat-developer/git-service/pkg/git"
+	"github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1"
 	gittransport "gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"strings"
 )
@@ -16,12 +16,12 @@ type StructuredIdentifier struct {
 	Branch string
 }
 
-func NewStructuredIdentifier(gitSource *git.Source, endpoint *gittransport.Endpoint) (StructuredIdentifier, error) {
+func NewStructuredIdentifier(gitSource *v1alpha1.GitSource, endpoint *gittransport.Endpoint) (StructuredIdentifier, error) {
 	var repo StructuredIdentifier
 	branch := Master
 
-	if gitSource.Ref != "" {
-		branch = gitSource.Ref
+	if gitSource.Spec.Ref != "" {
+		branch = gitSource.Spec.Ref
 	}
 	path := endpoint.Path
 	if strings.HasSuffix(path, ".git") {

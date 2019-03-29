@@ -1,8 +1,8 @@
 package repository_test
 
 import (
-	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
+	"github.com/redhat-developer/git-service/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	gittransport "gopkg.in/src-d/go-git.v4/plumbing/transport"
@@ -11,7 +11,7 @@ import (
 
 func TestNewStructuredIdentifierEmptyBranchAndStandardUrl(t *testing.T) {
 	// given
-	source := &git.Source{}
+	source := test.NewGitSource()
 	endpoint, err := gittransport.NewEndpoint("https://github.com/fabric8-services/fabric8-tenant")
 	require.NoError(t, err)
 
@@ -27,9 +27,7 @@ func TestNewStructuredIdentifierEmptyBranchAndStandardUrl(t *testing.T) {
 
 func TestNewStructuredIdentifierDevBranchAndHttpsCloneUrl(t *testing.T) {
 	// given
-	source := &git.Source{
-		Ref: "dev",
-	}
+	source := test.NewGitSource(test.WithRef("dev"))
 	endpoint, err := gittransport.NewEndpoint("https://github.com/fabric8-services/fabric8-tenant.git")
 	require.NoError(t, err)
 
@@ -45,7 +43,7 @@ func TestNewStructuredIdentifierDevBranchAndHttpsCloneUrl(t *testing.T) {
 
 func TestNewStructuredIdentifierEmptyBranchAndSshCloneUrl(t *testing.T) {
 	// given
-	source := &git.Source{}
+	source := test.NewGitSource()
 	endpoint, err := gittransport.NewEndpoint("git@github.com:fabric8-services/fabric8-tenant.git")
 	require.NoError(t, err)
 
@@ -61,7 +59,7 @@ func TestNewStructuredIdentifierEmptyBranchAndSshCloneUrl(t *testing.T) {
 
 func TestNewStructuredIdentifierEmptyBranchAndSshClonePath(t *testing.T) {
 	// given
-	source := &git.Source{}
+	source := test.NewGitSource()
 	endpoint, err := gittransport.NewEndpoint("git@github.com:/fabric8-services/fabric8-tenant.git")
 	require.NoError(t, err)
 
@@ -77,7 +75,7 @@ func TestNewStructuredIdentifierEmptyBranchAndSshClonePath(t *testing.T) {
 
 func TestNewStructuredIdentifierEmptyBranchAndWrongPathInHttpsUrl(t *testing.T) {
 	// given
-	source := &git.Source{}
+	source := test.NewGitSource()
 	endpoint, err := gittransport.NewEndpoint("https://github.com/fabric8-services-fabric8-tenant")
 	require.NoError(t, err)
 
@@ -90,7 +88,7 @@ func TestNewStructuredIdentifierEmptyBranchAndWrongPathInHttpsUrl(t *testing.T) 
 
 func TestNewStructuredIdentifierEmptyBranchAndWrongPathInSshUrl(t *testing.T) {
 	// given
-	source := &git.Source{}
+	source := test.NewGitSource()
 	endpoint, err := gittransport.NewEndpoint("git@github.com:/fabric8-services-fabric8-tenant")
 	require.NoError(t, err)
 

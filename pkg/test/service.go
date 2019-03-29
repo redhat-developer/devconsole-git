@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1"
 	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
 )
@@ -39,11 +40,11 @@ func (s *DummyService) GetLanguageList() ([]string, error) {
 }
 
 func (s *DummyService) Creator() repository.ServiceCreator {
-	return func(gitSource *git.Source) (service repository.GitService, e error) {
+	return func(gitSource *v1alpha1.GitSource, secret git.Secret) (service repository.GitService, e error) {
 		if s.shouldFail {
 			return nil, fmt.Errorf("creation failed")
 		}
-		if gitSource.Flavor == s.Flavor {
+		if gitSource.Spec.Flavor == s.Flavor {
 			return s, nil
 		}
 		return nil, nil

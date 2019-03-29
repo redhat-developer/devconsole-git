@@ -1,7 +1,6 @@
 package repository_test
 
 import (
-	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
 	"github.com/redhat-developer/git-service/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -17,12 +16,10 @@ var failingServiceCreator = test.NewDummyServiceCreator("failing", true, test.S(
 func TestNewServiceReturnsCorrectService(t *testing.T) {
 	// given
 	creators := []repository.ServiceCreator{ghServiceCreator, glServiceCreator, bbServiceCreator}
-	source := &git.Source{
-		Flavor: "bitbucket",
-	}
+	source := test.NewGitSource(test.WithFlavor("bitbucket"))
 
 	// when
-	service, err := repository.NewGitService(source, creators)
+	service, err := repository.NewGitService(source, nil, creators)
 
 	// then
 	require.NoError(t, err)
@@ -34,12 +31,10 @@ func TestNewServiceReturnsCorrectService(t *testing.T) {
 func TestNewServiceReturnsNilService(t *testing.T) {
 	// given
 	creators := []repository.ServiceCreator{ghServiceCreator, glServiceCreator}
-	source := &git.Source{
-		Flavor: "bitbucket",
-	}
+	source := test.NewGitSource(test.WithFlavor("bitbucket"))
 
 	// when
-	service, err := repository.NewGitService(source, creators)
+	service, err := repository.NewGitService(source, nil, creators)
 
 	// then
 	require.NoError(t, err)
@@ -49,12 +44,10 @@ func TestNewServiceReturnsNilService(t *testing.T) {
 func TestNewServiceReturnsError(t *testing.T) {
 	// given
 	creators := []repository.ServiceCreator{ghServiceCreator, glServiceCreator, failingServiceCreator, bbServiceCreator}
-	source := &git.Source{
-		Flavor: "bitbucket",
-	}
+	source := test.NewGitSource(test.WithFlavor("bitbucket"))
 
 	// when
-	service, err := repository.NewGitService(source, creators)
+	service, err := repository.NewGitService(source, nil, creators)
 
 	// then
 	require.Error(t, err)

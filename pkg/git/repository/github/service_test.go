@@ -37,13 +37,10 @@ func TestRepositoryServiceForBothAuthMethodsSuccessful(t *testing.T) {
 
 	for _, secret := range []git.Secret{usernamePassword, oauthToken} {
 		mockGHCalls(t, repoIdentifier, "master", test.S("pom.xml", "mvnw"), test.S("Java", "Go"))
-		source := &git.Source{
-			URL:    repoURL,
-			Secret: secret,
-		}
+		source := test.NewGitSource(test.WithURL(repoURL))
 
 		// when
-		service, err := github.NewRepoServiceIfMatches()(source)
+		service, err := github.NewRepoServiceIfMatches()(source, secret)
 
 		// then
 		require.NoError(t, err)
@@ -64,13 +61,10 @@ func TestRepositoryServiceForBothAuthMethodsSuccessful(t *testing.T) {
 
 func TestNewRepoServiceIfMatchesShouldNotMatchWhenGitLabHost(t *testing.T) {
 	// given
-	source := &git.Source{
-		URL:    "gitlab.com/" + repoIdentifier,
-		Secret: git.NewOauthToken([]byte("some-token")),
-	}
+	source := test.NewGitSource(test.WithURL("gitlab.com/" + repoIdentifier))
 
 	// when
-	service, err := github.NewRepoServiceIfMatches()(source)
+	service, err := github.NewRepoServiceIfMatches()(source, git.NewOauthToken([]byte("some-token")))
 
 	// then
 	assert.NoError(t, err)
@@ -79,14 +73,10 @@ func TestNewRepoServiceIfMatchesShouldNotMatchWhenGitLabHost(t *testing.T) {
 
 func TestNewRepoServiceIfMatchesShouldMatchWhenFlavorIsGitHub(t *testing.T) {
 	// given
-	source := &git.Source{
-		URL:    "gitprivatehub.com/" + repoIdentifier,
-		Secret: git.NewOauthToken([]byte("some-token")),
-		Flavor: "github",
-	}
+	source := test.NewGitSource(test.WithURL("gitprivatehub.com/"+repoIdentifier), test.WithFlavor("github"))
 
 	// when
-	service, err := github.NewRepoServiceIfMatches()(source)
+	service, err := github.NewRepoServiceIfMatches()(source, git.NewOauthToken([]byte("some-token")))
 
 	// then
 	assert.NoError(t, err)
@@ -95,13 +85,10 @@ func TestNewRepoServiceIfMatchesShouldMatchWhenFlavorIsGitHub(t *testing.T) {
 
 func TestNewRepoServiceIfMatchesShouldNotFailWhenSsh(t *testing.T) {
 	// given
-	source := &git.Source{
-		URL:    "git@github.com:" + repoIdentifier,
-		Secret: git.NewOauthToken([]byte("some-token")),
-	}
+	source := test.NewGitSource(test.WithURL("git@github.com:" + repoIdentifier))
 
 	// when
-	service, err := github.NewRepoServiceIfMatches()(source)
+	service, err := github.NewRepoServiceIfMatches()(source, git.NewOauthToken([]byte("some-token")))
 
 	// then
 	assert.NoError(t, err)
@@ -120,14 +107,10 @@ func TestRepositoryServiceForWrongRepo(t *testing.T) {
 			Times(2).
 			Reply(404).
 			BodyString(notFound)
-		source := &git.Source{
-			URL:    repoURL,
-			Secret: secret,
-			Ref:    "dev",
-		}
+		source := test.NewGitSource(test.WithURL(repoURL), test.WithRef("dev"))
 
 		// when
-		service, err := github.NewRepoServiceIfMatches()(source)
+		service, err := github.NewRepoServiceIfMatches()(source, secret)
 
 		// then
 		require.NoError(t, err)
@@ -156,13 +139,10 @@ func TestRepositoryServiceReturningRateLimit(t *testing.T) {
 			Times(2).
 			Reply(403).
 			BodyString(apiRateLimit)
-		source := &git.Source{
-			URL:    repoURL,
-			Secret: secret,
-		}
+		source := test.NewGitSource(test.WithURL(repoURL))
 
 		// when
-		service, err := github.NewRepoServiceIfMatches()(source)
+		service, err := github.NewRepoServiceIfMatches()(source, secret)
 
 		// then
 		require.NoError(t, err)

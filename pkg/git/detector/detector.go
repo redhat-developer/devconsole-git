@@ -2,11 +2,12 @@ package detector
 
 import (
 	"fmt"
+	"github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1"
+	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
 	"regexp"
 	"sync"
 
-	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository/github"
 )
 
@@ -14,12 +15,12 @@ var gitServiceCreators = []repository.ServiceCreator{
 	github.NewRepoServiceIfMatches(),
 }
 
-func DetectBuildEnvironments(gitSource *git.Source) (*BuildEnvStats, error) {
-	return detectBuildEnvs(gitSource, gitServiceCreators)
+func DetectBuildEnvironments(gitSource *v1alpha1.GitSource, secret git.Secret) (*BuildEnvStats, error) {
+	return detectBuildEnvs(gitSource, secret, gitServiceCreators)
 }
 
-func detectBuildEnvs(gitSource *git.Source, serviceCreators []repository.ServiceCreator) (*BuildEnvStats, error) {
-	service, err := repository.NewGitService(gitSource, serviceCreators)
+func detectBuildEnvs(gitSource *v1alpha1.GitSource, secret git.Secret, serviceCreators []repository.ServiceCreator) (*BuildEnvStats, error) {
+	service, err := repository.NewGitService(gitSource, secret, serviceCreators)
 	if err != nil {
 		return nil, err
 	}

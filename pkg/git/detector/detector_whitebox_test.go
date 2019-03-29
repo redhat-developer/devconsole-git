@@ -23,10 +23,10 @@ var (
 
 func TestFailingCreator(t *testing.T) {
 	// given
-	source := &git.Source{Flavor: failingService.Flavor}
+	source := test.NewGitSource(test.WithFlavor(failingService.Flavor))
 
 	// when
-	buildEnvStats, err := detectBuildEnvs(source, append(allCreators, failingService.Creator()))
+	buildEnvStats, err := detectBuildEnvs(source, nil, append(allCreators, failingService.Creator()))
 
 	// then
 	require.Error(t, err)
@@ -60,23 +60,17 @@ func XTestGitHubDetectorWithToken(t *testing.T) {
 	token, err := ioutil.ReadFile(homeDir + "/.github-auth")
 	require.NoError(t, err)
 
-	ghSource := &git.Source{
-		URL:    "https://github.com/wildfly/wildfly",
-		Secret: git.NewOauthToken(token),
-	}
+	ghSource := test.NewGitSource(test.WithURL("https://github.com/wildfly/wildfly"))
 
-	buildEnvStats, err := DetectBuildEnvironments(ghSource)
+	buildEnvStats, err := DetectBuildEnvironments(ghSource, git.NewOauthToken(token))
 	require.NoError(t, err)
 	printBuildEnvStats(buildEnvStats)
 }
 
 func XTestGitHubDetectorWithUsernameAndPassword(t *testing.T) {
-	ghSource := &git.Source{
-		URL:    "https://github.com/wildfly/wildfly",
-		Secret: git.NewUsernamePassword("anonymous", ""),
-	}
+	ghSource := test.NewGitSource(test.WithURL("https://github.com/wildfly/wildfly"))
 
-	buildEnvStats, err := DetectBuildEnvironments(ghSource)
+	buildEnvStats, err := DetectBuildEnvironments(ghSource, git.NewUsernamePassword("anonymous", ""))
 	require.NoError(t, err)
 	printBuildEnvStats(buildEnvStats)
 }

@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	gogh "github.com/google/go-github/github"
+	"github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1"
 	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
 	gittransport "gopkg.in/src-d/go-git.v4/plumbing/transport"
@@ -14,33 +15,33 @@ const (
 )
 
 type RepositoryService struct {
-	gitSource *git.Source
+	gitSource *v1alpha1.GitSource
 	client    *gogh.Client
 	repo      repository.StructuredIdentifier
 	filenames []string
 }
 
 func NewRepoServiceIfMatches() repository.ServiceCreator {
-	return func(gitSource *git.Source) (repository.GitService, error) {
-		endpoint, err := gittransport.NewEndpoint(gitSource.URL)
+	return func(gitSource *v1alpha1.GitSource, secret git.Secret) (repository.GitService, error) {
+		endpoint, err := gittransport.NewEndpoint(gitSource.Spec.URL)
 		if err != nil {
 			return nil, err
 		}
-		if endpoint.Host == githubHost || gitSource.Flavor == githubFlavor {
-			return newGhService(gitSource, endpoint)
+		if endpoint.Host == githubHost || gitSource.Spec.Flavor == githubFlavor {
+			return newGhService(gitSource, endpoint, secret)
 		}
 		return nil, nil
 	}
 }
 
-func newGhService(gitSource *git.Source, endpoint *gittransport.Endpoint) (*RepositoryService, error) {
+func newGhService(gitSource *v1alpha1.GitSource, endpoint *gittransport.Endpoint, secret git.Secret) (*RepositoryService, error) {
 	repo, err := repository.NewStructuredIdentifier(gitSource, endpoint)
 	if err != nil {
 		return nil, err
 	}
-	baseClient := gitSource.Secret.Client()
-	if gitSource.Secret.SecretType() == git.UsernamePasswordType {
-		username, password := git.ParseUsernameAndPassword(gitSource.Secret.SecretContent())
+	baseClient := secret.Client()
+	if secret.SecretType() == git.UsernamePasswordType {
+		username, password := git.ParseUsernameAndPassword(secret.SecretContent())
 		baseClient.Transport = &gogh.BasicAuthTransport{Username: username, Password: password}
 	}
 	client := gogh.NewClient(baseClient)

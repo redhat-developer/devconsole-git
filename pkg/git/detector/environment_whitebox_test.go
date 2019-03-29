@@ -2,7 +2,6 @@ package detector
 
 import (
 	"fmt"
-	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
 	"github.com/redhat-developer/git-service/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -46,10 +45,10 @@ var (
 
 func TestDetectJavaMavenAndGradle(t *testing.T) {
 	// given
-	source := &git.Source{Flavor: javaService.Flavor}
+	source := test.NewGitSource(test.WithFlavor(javaService.Flavor))
 
 	// when
-	buildEnvStats, err := detectBuildEnvs(source, allCreators)
+	buildEnvStats, err := detectBuildEnvs(source, nil, allCreators)
 
 	// then
 	require.NoError(t, err)
@@ -68,10 +67,10 @@ func TestDetectJavaMavenAndGradle(t *testing.T) {
 
 func TestDetectJavaMavenAndGo(t *testing.T) {
 	// given
-	source := &git.Source{Flavor: javaAndGoService.Flavor}
+	source := test.NewGitSource(test.WithFlavor(javaAndGoService.Flavor))
 
 	// when
-	buildEnvStats, err := detectBuildEnvs(source, allCreators)
+	buildEnvStats, err := detectBuildEnvs(source, nil, allCreators)
 
 	// then
 	require.NoError(t, err)
@@ -91,10 +90,10 @@ func TestDetectJavaMavenAndGo(t *testing.T) {
 
 func TestDetectRuby(t *testing.T) {
 	// given
-	source := &git.Source{Flavor: rubyService.Flavor}
+	source := test.NewGitSource(test.WithFlavor(rubyService.Flavor))
 
 	// when
-	buildEnvStats, err := detectBuildEnvs(source, allCreators)
+	buildEnvStats, err := detectBuildEnvs(source, nil, allCreators)
 
 	// then
 	require.NoError(t, err)
@@ -112,10 +111,10 @@ func TestDetectRuby(t *testing.T) {
 
 func TestDetectPHP(t *testing.T) {
 	// given
-	source := &git.Source{Flavor: phpService.Flavor}
+	source := test.NewGitSource(test.WithFlavor(phpService.Flavor))
 
 	// when
-	buildEnvStats, err := detectBuildEnvs(source, allCreators)
+	buildEnvStats, err := detectBuildEnvs(source, nil, allCreators)
 
 	// then
 	require.NoError(t, err)
@@ -133,10 +132,10 @@ func TestDetectPHP(t *testing.T) {
 
 func TestDetectNodeJS(t *testing.T) {
 	// given
-	source := &git.Source{Flavor: nodeJsService.Flavor}
+	source := test.NewGitSource(test.WithFlavor(nodeJsService.Flavor))
 
 	// when
-	buildEnvStats, err := detectBuildEnvs(source, allCreators)
+	buildEnvStats, err := detectBuildEnvs(source, nil, allCreators)
 
 	// then
 	require.NoError(t, err)
@@ -154,10 +153,10 @@ func TestDetectNodeJS(t *testing.T) {
 
 func TestDetectPython(t *testing.T) {
 	// given
-	source := &git.Source{Flavor: pythonService.Flavor}
+	source := test.NewGitSource(test.WithFlavor(pythonService.Flavor))
 
 	// when
-	buildEnvStats, err := detectBuildEnvs(source, allCreators)
+	buildEnvStats, err := detectBuildEnvs(source, nil, allCreators)
 
 	// then
 	require.NoError(t, err)
@@ -175,10 +174,10 @@ func TestDetectPython(t *testing.T) {
 
 func TestDetectPerl(t *testing.T) {
 	// given
-	source := &git.Source{Flavor: perlService.Flavor}
+	source := test.NewGitSource(test.WithFlavor(perlService.Flavor))
 
 	// when
-	buildEnvStats, err := detectBuildEnvs(source, allCreators)
+	buildEnvStats, err := detectBuildEnvs(source, nil, allCreators)
 
 	// then
 	require.NoError(t, err)
@@ -196,10 +195,10 @@ func TestDetectPerl(t *testing.T) {
 
 func TestDetectDotnet(t *testing.T) {
 	// given
-	source := &git.Source{Flavor: dotnetService.Flavor}
+	source := test.NewGitSource(test.WithFlavor(dotnetService.Flavor))
 
 	// when
-	buildEnvStats, err := detectBuildEnvs(source, allCreators)
+	buildEnvStats, err := detectBuildEnvs(source, nil, allCreators)
 
 	// then
 	require.NoError(t, err)
