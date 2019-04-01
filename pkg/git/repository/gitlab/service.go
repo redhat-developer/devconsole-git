@@ -38,12 +38,12 @@ func newGhClient(gitSource *v1alpha1.GitSource, secret git.Secret, endpoint *git
 		return nil, err
 	}
 
-	client := gogl.NewOAuthClient(secret.Client(), secret.SecretContent())
+	client := gogl.NewClient(nil, secret.SecretContent())
+	client.SetBaseURL(getBaseUrl(endpoint))
+
 	if secret.SecretType() == git.UsernamePasswordType {
 		username, password := git.ParseUsernameAndPassword(secret.SecretContent())
-		shortUrl := *endpoint
-		shortUrl.Path = ""
-		client, err = gogl.NewBasicAuthClient(secret.Client(), shortUrl.String(), username, password)
+		client, err = gogl.NewBasicAuthClient(nil, getBaseUrl(endpoint), username, password)
 		if err != nil {
 			return nil, err
 		}
@@ -53,6 +53,13 @@ func newGhClient(gitSource *v1alpha1.GitSource, secret git.Secret, endpoint *git
 		client: client,
 		repo:   repo,
 	}, nil
+}
+
+func getBaseUrl(endpoint *gittransport.Endpoint) string {
+	if endpoint.Protocol == "ssh" || endpoint.Protocol == "git" {
+		return "https://" + endpoint.Host
+	}
+	return endpoint.String()[:len(endpoint.String())-len(endpoint.Path)]
 }
 
 func (s *RepositoryService) GetListOfFilesInRootDir() ([]string, error) {

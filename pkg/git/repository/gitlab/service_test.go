@@ -19,7 +19,8 @@ import (
 
 const (
 	repoIdentifier = "some-org/some-repo"
-	repoURL        = "https://gitlab.com/" + repoIdentifier
+	glHost         = "https://gitlab.com/"
+	repoURL        = glHost + repoIdentifier
 	notFound       = `{"message":"404 Project Not Found"}`
 )
 
@@ -27,11 +28,13 @@ func TestRepositoryServiceForBothAuthMethodsSuccessful(t *testing.T) {
 	// given
 	defer gock.OffAll()
 	usernamePassword := git.NewUsernamePassword("anonymous", "")
+	mockGLCalls(t, glHost, repoIdentifier, "master", "", test.S("pom.xml", "mvnw"), test.S("Java", "Go"))
+
 	oauthToken := git.NewOauthToken([]byte("some-token"))
+	mockGLCalls(t, glHost, repoIdentifier, "master", "some-token", test.S("pom.xml", "mvnw"), test.S("Java", "Go"))
 	mockTokenCall(t)
 
 	for _, secret := range []git.Secret{usernamePassword, oauthToken} {
-		mockGLCalls(t, repoIdentifier, "master", test.S("pom.xml", "mvnw"), test.S("Java", "Go"))
 		source := test.NewGitSource(test.WithURL(repoURL))
 
 		// when
@@ -123,6 +126,38 @@ func TestRepositoryServiceForWrongRepo(t *testing.T) {
 	}
 }
 
+func TestRepositoryServiceForPrivateInstance(t *testing.T) {
+	// given
+	defer gock.OffAll()
+	oauthToken := git.NewOauthToken([]byte("some-token"))
+
+	for _, url := range []string{"https://gitlab.cee.redhat.com/" + repoIdentifier, "git@gitlab.cee.redhat.com:" + repoIdentifier} {
+
+		mockGLCalls(t, "https://gitlab.cee.redhat.com/", repoIdentifier, "master", "some-token",
+			test.S("pom.xml", "mvnw"), test.S("Java", "Go"))
+
+		source := test.NewGitSource(test.WithURL(url), test.WithFlavor("gitlab"))
+
+		// when
+		service, err := gitlab.NewRepoServiceIfMatches()(source, oauthToken)
+
+		// then
+		require.NoError(t, err)
+
+		filesInRootDir, err := service.GetListOfFilesInRootDir()
+		require.NoError(t, err)
+		require.Len(t, filesInRootDir, 2)
+		assert.Contains(t, filesInRootDir, "pom.xml")
+		assert.Contains(t, filesInRootDir, "mvnw")
+
+		languageList, err := service.GetLanguageList()
+		require.NoError(t, err)
+		require.Len(t, languageList, 2)
+		assert.Contains(t, languageList, "Java")
+		assert.Contains(t, languageList, "Go")
+	}
+}
+
 func mockTokenCall(t *testing.T) {
 	token := &oauth2.Token{
 		AccessToken: "some-token",
@@ -136,7 +171,7 @@ func mockTokenCall(t *testing.T) {
 		BodyString(string(bytes))
 }
 
-func mockGLCalls(t *testing.T, prjPath, branch string, files, langs test.SliceOfStrings) {
+func mockGLCalls(t *testing.T, host, prjPath, branch, token string, files, langs test.SliceOfStrings) {
 	var treeNodes []gogl.TreeNode
 	for _, file := range files() {
 		treeNodes = append(treeNodes, gogl.TreeNode{
@@ -149,10 +184,13 @@ func mockGLCalls(t *testing.T, prjPath, branch string, files, langs test.SliceOf
 	bytes, err := json.Marshal(treeNodes)
 	require.NoError(t, err)
 
-	gock.New("https://gitlab.com").
+	treeMock := gock.New(host).
 		Get(fmt.Sprintf("/api/v4/projects/%s/repository/tree", prjPath)).
-		MatchParam("ref", branch).
-		Reply(200).
+		MatchParam("ref", branch)
+	if token != "" {
+		treeMock.MatchHeader("Private-Token", token)
+	}
+	treeMock.Reply(200).
 		BodyString(string(bytes))
 
 	languages := map[string]float32{}
@@ -163,9 +201,12 @@ func mockGLCalls(t *testing.T, prjPath, branch string, files, langs test.SliceOf
 	bytes, err = json.Marshal(languages)
 	require.NoError(t, err)
 
-	gock.New("https://gitlab.com").
-		Get(fmt.Sprintf("/api/v4/projects/%s/languages", prjPath)).
-		Reply(200).
+	langsMock := gock.New(host).
+		Get(fmt.Sprintf("/api/v4/projects/%s/languages", prjPath))
+	if token != "" {
+		langsMock.MatchHeader("Private-Token", token)
+	}
+	langsMock.Reply(200).
 		BodyString(string(bytes))
 }
 
