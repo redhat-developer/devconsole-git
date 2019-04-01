@@ -50,5 +50,6 @@ rules:
   - devconsole.openshift.io
   resources:
   - '*'
+  - gitpushes
   verbs:
   - '*'
