@@ -75,6 +75,22 @@ func XTestGitHubDetectorWithUsernameAndPassword(t *testing.T) {
 	printBuildEnvStats(buildEnvStats)
 }
 
+func XTestBitbucketDetectorWithUsernameAndPassword(t *testing.T) {
+	ghSource := test.NewGitSource(test.WithURL("https://bitbucket.org/atlassian/asap-java"))
+
+	buildEnvStats, err := DetectBuildEnvironments(ghSource, git.NewUsernamePassword("", ""))
+	require.NoError(t, err)
+	printBuildEnvStats(buildEnvStats)
+}
+
+func XTestBitbucketDetectorWithToken(t *testing.T) {
+	ghSource := test.NewGitSource(test.WithURL("https://bitbucket.org/atlassian/asap-java"))
+
+	buildEnvStats, err := DetectBuildEnvironments(ghSource, git.NewOauthToken([]byte("")))
+	require.NoError(t, err)
+	printBuildEnvStats(buildEnvStats)
+}
+
 func printBuildEnvStats(buildEnvStats *BuildEnvStats) {
 	fmt.Println(buildEnvStats.SortedLanguages)
 	for _, build := range buildEnvStats.DetectedBuildTools {

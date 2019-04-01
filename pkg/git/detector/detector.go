@@ -5,6 +5,7 @@ import (
 	"github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1"
 	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
+	"github.com/redhat-developer/git-service/pkg/git/repository/bitbucket"
 	"regexp"
 	"sync"
 
@@ -13,6 +14,7 @@ import (
 
 var gitServiceCreators = []repository.ServiceCreator{
 	github.NewRepoServiceIfMatches(),
+	bitbucket.NewRepoServiceIfMatches(),
 }
 
 func DetectBuildEnvironments(gitSource *v1alpha1.GitSource, secret git.Secret) (*BuildEnvStats, error) {
