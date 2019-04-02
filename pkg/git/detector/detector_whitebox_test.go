@@ -3,6 +3,7 @@ package detector
 import (
 	"fmt"
 	"github.com/redhat-developer/git-service/pkg/test"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -54,7 +55,22 @@ func TestFailingGetLanguagesList(t *testing.T) {
 	require.Nil(t, buildEnvStats)
 }
 
-// ignored tests as they reach the real services
+func TestGitLabDetectorWithToken(t *testing.T) {
+	// given
+	glSource := test.NewGitSource(test.WithURL("https://gitlab.com/matousjobanek/quarkus-knative"))
+
+	// when
+	buildEnvStats, err := DetectBuildEnvironments(glSource, git.NewOauthToken([]byte("")))
+
+	// then
+	require.NoError(t, err)
+	require.Len(t, buildEnvStats.DetectedBuildTools, 1)
+	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTools, Maven, "pom.xml")
+	require.Len(t, buildEnvStats.SortedLanguages, 1)
+	assert.Equal(t, buildEnvStats.SortedLanguages[0], "Java")
+}
+
+// ignored tests as they reach the real services or needs specific credentials
 
 func XTestGitHubDetectorWithToken(t *testing.T) {
 	token, err := ioutil.ReadFile(homeDir + "/.github-auth")
@@ -71,15 +87,6 @@ func XTestGitHubDetectorWithUsernameAndPassword(t *testing.T) {
 	ghSource := test.NewGitSource(test.WithURL("https://github.com/wildfly/wildfly"))
 
 	buildEnvStats, err := DetectBuildEnvironments(ghSource, git.NewUsernamePassword("anonymous", ""))
-	require.NoError(t, err)
-	printBuildEnvStats(buildEnvStats)
-}
-
-func XTestGitLabDetectorWithToken(t *testing.T) {
-
-	glSource := test.NewGitSource(test.WithURL("https://gitlab.com/gitlab-org/gitlab-qa"))
-
-	buildEnvStats, err := DetectBuildEnvironments(glSource, git.NewOauthToken([]byte("")))
 	require.NoError(t, err)
 	printBuildEnvStats(buildEnvStats)
 }
