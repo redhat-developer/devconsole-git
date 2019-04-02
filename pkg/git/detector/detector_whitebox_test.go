@@ -3,6 +3,7 @@ package detector
 import (
 	"fmt"
 	"github.com/redhat-developer/git-service/pkg/test"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -52,6 +53,21 @@ func TestFailingGetLanguagesList(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, err.Error(), "failing languages")
 	require.Nil(t, buildEnvStats)
+}
+
+func TestBitbucketDetectorWithToken(t *testing.T) {
+	// given
+	glSource := test.NewGitSource(test.WithURL("https://bitbucket.org/mjobanek-rh/quarkus-knative"))
+
+	// when
+	buildEnvStats, err := DetectBuildEnvironments(glSource, git.NewOauthToken([]byte("")))
+
+	// then
+	require.NoError(t, err)
+	require.Len(t, buildEnvStats.DetectedBuildTools, 1)
+	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTools, Maven, "pom.xml")
+	require.Len(t, buildEnvStats.SortedLanguages, 1)
+	assert.Equal(t, "java", buildEnvStats.SortedLanguages[0])
 }
 
 // ignored tests as they reach the real services
