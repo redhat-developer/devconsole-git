@@ -67,7 +67,7 @@ func TestGitLabDetectorWithToken(t *testing.T) {
 	require.Len(t, buildEnvStats.DetectedBuildTools, 1)
 	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTools, Maven, "pom.xml")
 	require.Len(t, buildEnvStats.SortedLanguages, 1)
-	assert.Equal(t, buildEnvStats.SortedLanguages[0], "Java")
+	assert.Equal(t, "Java", buildEnvStats.SortedLanguages[0])
 }
 
 // ignored tests as they reach the real services or needs specific credentials
