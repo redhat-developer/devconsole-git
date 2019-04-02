@@ -21,6 +21,8 @@ type RepositoryService struct {
 	filenames []string
 }
 
+// NewRepoServiceIfMatches returns function creating Github repository service if either host of the git repo URL is github.com
+// or flavor of the given git source is github then, nil otherwise
 func NewRepoServiceIfMatches() repository.ServiceCreator {
 	return func(gitSource *v1alpha1.GitSource, secret git.Secret) (repository.GitService, error) {
 		endpoint, err := gittransport.NewEndpoint(gitSource.Spec.URL)

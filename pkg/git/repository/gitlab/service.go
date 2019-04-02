@@ -18,6 +18,8 @@ type RepositoryService struct {
 	repo   repository.StructuredIdentifier
 }
 
+// NewRepoServiceIfMatches returns function creating Github repository service if either host of the git repo URL is gitlab.com
+// or flavor of the given git source is gitlab then, nil otherwise
 func NewRepoServiceIfMatches() repository.ServiceCreator {
 	return func(gitSource *v1alpha1.GitSource, secret git.Secret) (repository.GitService, error) {
 		endpoint, err := gittransport.NewEndpoint(gitSource.Spec.URL)

@@ -17,6 +17,7 @@ var gitServiceCreators = []repository.ServiceCreator{
 	gitlab.NewRepoServiceIfMatches(),
 }
 
+// DetectBuildEnvironments detects build tools and languages in the git repository defined by the given v1alpha1.GitSource
 func DetectBuildEnvironments(gitSource *v1alpha1.GitSource, secret git.Secret) (*BuildEnvStats, error) {
 	return detectBuildEnvs(gitSource, secret, gitServiceCreators)
 }
