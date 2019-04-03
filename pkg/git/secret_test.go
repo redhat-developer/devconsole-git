@@ -1,14 +1,104 @@
 package git_test
 
 import (
+	"bytes"
 	"github.com/redhat-developer/git-service/pkg/git"
+	"github.com/redhat-developer/git-service/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/ssh"
 	"golang.org/x/oauth2"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
+	gitssh "gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
 	gogitssh "gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
 	"testing"
 )
+
+var pathToTestDir = "../test"
+
+func TestNewSshKey(t *testing.T) {
+	// given
+	privateKey := test.PrivateWithPassphrase(t, pathToTestDir)
+
+	// when
+	key := git.NewSshKey(privateKey, []byte("secret"))
+
+	// then
+	assert.Equal(t, string(bytes.TrimSpace(privateKey)), key.SecretContent())
+	assert.Equal(t, git.SshKeyType, key.SecretType())
+	assert.Nil(t, key.Client())
+}
+
+func TestNewSshKeyWithPassphraseAuthMethodSuccessful(t *testing.T) {
+	// given
+	key := git.NewSshKey(test.PrivateWithPassphrase(t, pathToTestDir), []byte("secret"))
+
+	// when
+	authMethod, err := key.GitAuthMethod()
+
+	// then
+	require.NoError(t, err)
+	assertSshKey(t, authMethod, test.PublicWithPassphrase(t, pathToTestDir))
+}
+
+func TestNewSshKeyWithoutPassphraseAuthMethodUsingEmptyPassphraseSuccessful(t *testing.T) {
+	// given
+	key := git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte(""))
+
+	// when
+	authMethod, err := key.GitAuthMethod()
+
+	// then
+	require.NoError(t, err)
+	assertSshKey(t, authMethod, test.PublicWithoutPassphrase(t, pathToTestDir))
+}
+
+func TestNewSshKeyWithPassphraseAuthMethodUsingEmptyPassphraseFailed(t *testing.T) {
+	// given
+	key := git.NewSshKey(test.PrivateWithPassphrase(t, pathToTestDir), []byte(""))
+
+	// when
+	authMethod, err := key.GitAuthMethod()
+
+	// then
+	assert.Error(t, err)
+	assert.Nil(t, authMethod)
+}
+
+func TestNewSshKeyWithPassphraseAuthMethodUsingAnyPassphraseFailed(t *testing.T) {
+	// given
+	key := git.NewSshKey(test.PrivateWithPassphrase(t, pathToTestDir), []byte("any"))
+
+	// when
+	authMethod, err := key.GitAuthMethod()
+
+	// then
+	assert.Error(t, err)
+	assert.Nil(t, authMethod)
+}
+
+func TestNewSshKeyWithoutPassphraseAuthMethodUsingAnyPassphraseSuccessful(t *testing.T) {
+	// given
+	key := git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte("any"))
+
+	// when
+	authMethod, err := key.GitAuthMethod()
+
+	// then
+	require.NoError(t, err)
+	assertSshKey(t, authMethod, test.PublicWithoutPassphrase(t, pathToTestDir))
+}
+
+func assertSshKey(t *testing.T, authMethod transport.AuthMethod, publicKeyContent []byte) {
+	assert.Equal(t, gogitssh.PublicKeysName, authMethod.Name())
+	keys, ok := authMethod.(*gitssh.PublicKeys)
+	require.True(t, ok)
+
+	publicKey, _, _, _, err := ssh.ParseAuthorizedKey(publicKeyContent)
+	require.NoError(t, err)
+	assert.Equal(t, publicKey.Marshal(), keys.Signer.PublicKey().Marshal())
+	assert.Equal(t, "git", keys.User)
+}
 
 func TestNewOauthToken(t *testing.T) {
 	// given

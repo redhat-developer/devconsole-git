@@ -18,6 +18,7 @@ import (
 )
 
 const (
+	pathToTestDir  = "../../../test"
 	repoIdentifier = "some-org/some-repo"
 	glHost         = "https://gitlab.com/"
 	repoURL        = glHost + repoIdentifier
@@ -55,6 +56,19 @@ func TestRepositoryServiceForBothAuthMethodsSuccessful(t *testing.T) {
 		assert.Contains(t, languageList, "Java")
 		assert.Contains(t, languageList, "Go")
 	}
+}
+
+func TestNewRepoServiceIfMatchesShouldNotMatchWhenSshKey(t *testing.T) {
+	// given
+	source := test.NewGitSource(test.WithURL("git@gitlab.com:" + repoIdentifier))
+
+	// when
+	service, err := gitlab.NewRepoServiceIfMatches()(source,
+		git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte("")))
+
+	// then
+	assert.NoError(t, err)
+	assert.Nil(t, service)
 }
 
 func TestNewRepoServiceIfMatchesShouldNotMatchWhenGitLabHost(t *testing.T) {

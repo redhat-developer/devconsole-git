@@ -25,6 +25,9 @@ type RepositoryService struct {
 // or flavor of the given git source is github then, nil otherwise
 func NewRepoServiceIfMatches() repository.ServiceCreator {
 	return func(gitSource *v1alpha1.GitSource, secret git.Secret) (repository.GitService, error) {
+		if secret.SecretType() == git.SshKeyType {
+			return nil, nil
+		}
 		endpoint, err := gittransport.NewEndpoint(gitSource.Spec.URL)
 		if err != nil {
 			return nil, err

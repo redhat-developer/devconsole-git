@@ -1,7 +1,7 @@
 package gitlab
 
 import (
-	"github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1"
+	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
 	gogl "github.com/xanzy/go-gitlab"
@@ -22,6 +22,9 @@ type RepositoryService struct {
 // or flavor of the given git source is gitlab then, nil otherwise
 func NewRepoServiceIfMatches() repository.ServiceCreator {
 	return func(gitSource *v1alpha1.GitSource, secret git.Secret) (repository.GitService, error) {
+		if secret.SecretType() == git.SshKeyType {
+			return nil, nil
+		}
 		endpoint, err := gittransport.NewEndpoint(gitSource.Spec.URL)
 		if err != nil {
 			return nil, err

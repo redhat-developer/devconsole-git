@@ -2,6 +2,7 @@ package detector
 
 import (
 	"fmt"
+	"github.com/redhat-developer/git-service/pkg/git/repository"
 	"github.com/redhat-developer/git-service/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -22,6 +23,39 @@ var (
 	failingLanguagesService = test.NewDummyService("failing-languages", false, test.S("any"), nilSlice)
 )
 
+const pathToTestDir = "../../test"
+
+func TestDetectBuildEnvsShouldUseGenericGitIfNotOtherMatches(t *testing.T) {
+	// given
+	dummyRepo := test.NewDummyGitRepo(t, repository.Master)
+	dummyRepo.Commit(
+		"pom.xml", "package.json", "other.json", "src/main/java/Any.java", "src/main/java/Another.java",
+		"src/main/java/Third.java", "pkg/main.go", "pkg/cool.go", "pkg/cool_test.go", "pkg/another.go")
+
+	sshKey := git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte(""))
+	source := test.NewGitSource(test.WithURL(dummyRepo.Path), test.WithFlavor("not-existing"))
+
+	// when
+	buildEnvStats, err := detectBuildEnvs(source, sshKey, allCreators)
+
+	// then
+	require.NoError(t, err)
+	require.NotNil(t, buildEnvStats)
+
+	buildTools := buildEnvStats.DetectedBuildTools
+	require.Len(t, buildTools, 2)
+
+	assertContainsBuildTool(t, buildTools, Maven, "pom.xml")
+	assertContainsBuildTool(t, buildTools, NodeJS, "package.json")
+
+	langs := buildEnvStats.SortedLanguages
+	assert.Len(t, langs, 4)
+	assert.Equal(t, "Go", langs[0])
+	assert.Equal(t, "Java", langs[1])
+	assert.Equal(t, "JSON", langs[2])
+	assert.Equal(t, "XML", langs[3])
+}
+
 func TestFailingCreator(t *testing.T) {
 	// given
 	source := test.NewGitSource(test.WithFlavor(failingService.Flavor))
@@ -32,6 +66,21 @@ func TestFailingCreator(t *testing.T) {
 	// then
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "creation failed")
+	require.Nil(t, buildEnvStats)
+}
+
+func TestFailingGenericGitCreation(t *testing.T) {
+	// given
+	dummyRepo := test.NewDummyGitRepo(t, repository.Master)
+	sshKey := git.NewSshKey(test.PrivateWithPassphrase(t, pathToTestDir), []byte(""))
+	source := test.NewGitSource(test.WithURL(dummyRepo.Path), test.WithFlavor("not-existing"))
+
+	// when
+	buildEnvStats, err := detectBuildEnvs(source, sshKey, allCreators)
+
+	// then
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "cannot decode encrypted private keys")
 	require.Nil(t, buildEnvStats)
 }
 
@@ -72,7 +121,9 @@ func TestGitLabDetectorWithToken(t *testing.T) {
 
 // ignored tests as they reach the real services or needs specific credentials
 
-func XTestGitHubDetectorWithToken(t *testing.T) {
+func TestGitHubDetectorWithToken(t *testing.T) {
+	t.Skip("skip to avoid API rate limits")
+
 	token, err := ioutil.ReadFile(homeDir + "/.github-auth")
 	require.NoError(t, err)
 
@@ -83,7 +134,9 @@ func XTestGitHubDetectorWithToken(t *testing.T) {
 	printBuildEnvStats(buildEnvStats)
 }
 
-func XTestGitHubDetectorWithUsernameAndPassword(t *testing.T) {
+func TestGitHubDetectorWithUsernameAndPassword(t *testing.T) {
+	t.Skip("skip to avoid API rate limits")
+
 	ghSource := test.NewGitSource(test.WithURL("https://github.com/wildfly/wildfly"))
 
 	buildEnvStats, err := DetectBuildEnvironments(ghSource, git.NewUsernamePassword("anonymous", ""))
@@ -91,7 +144,34 @@ func XTestGitHubDetectorWithUsernameAndPassword(t *testing.T) {
 	printBuildEnvStats(buildEnvStats)
 }
 
-func XTestGitLabDetectorWithUsernamePassword(t *testing.T) {
+func TestGenericGitUsingSshAccessingGitHub(t *testing.T) {
+	t.Skip("skip as it depends on ssh key registered in GH")
+
+	buffer, err := ioutil.ReadFile(homeDir + "/.ssh/id_rsa")
+	require.NoError(t, err)
+
+	ghSource := test.NewGitSource(test.WithURL("git@github.com:wildfly/wildfly.git"))
+
+	buildEnvStats, err := DetectBuildEnvironments(ghSource, git.NewSshKey(buffer, []byte("passphrase")))
+	require.NoError(t, err)
+	printBuildEnvStats(buildEnvStats)
+}
+
+func TestGenericGitUsingSshAccessingGitLab(t *testing.T) {
+	t.Skip("skip as it depends on ssh key registered in GH")
+
+	buffer, err := ioutil.ReadFile(homeDir + "/.ssh/id_rsa")
+	require.NoError(t, err)
+
+	ghSource := test.NewGitSource(test.WithURL("git@gitlab.cee.redhat.com:mjobanek/housekeeping.git"))
+
+	buildEnvStats, err := DetectBuildEnvironments(ghSource, git.NewSshKey(buffer, []byte("passphrase")))
+	require.NoError(t, err)
+	printBuildEnvStats(buildEnvStats)
+}
+
+func TestGitLabDetectorWithUsernamePassword(t *testing.T) {
+	t.Skip("skip as GitLab doesn't support authN with empty credential nor with anonymous user")
 
 	glSource := test.NewGitSource(test.WithURL("https://gitlab.com/gitlab-org/gitlab-qa"))
 
