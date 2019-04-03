@@ -15,9 +15,13 @@ import (
 )
 
 type Secret interface {
+	// GitAuthMethod returns an instance of git AuthMethod for the secret
 	GitAuthMethod() (transport.AuthMethod, error)
+	// Client returns an instance of http.Client for the secret
 	Client() *http.Client
+	// SecretType returns a type of the secret
 	SecretType() string
+	// SecretContent returns an actual content of the secret
 	SecretContent() string
 }
 

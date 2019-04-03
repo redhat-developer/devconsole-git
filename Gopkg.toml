@@ -86,6 +86,10 @@ required = [
   name = "github.com/google/go-github"
   version = "v24.0.1"
 
+[[override]]
+  name = "github.com/xanzy/go-gitlab"
+  version = "v0.16.1"
+
 [[constraint]]
   name = "github.com/sirupsen/logrus"
   version = "v1.4.0"

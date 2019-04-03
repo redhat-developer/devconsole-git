@@ -581,6 +581,17 @@
   revision = "55ae3d9d557340b5bc24cd8aa5f6fa2c2ab31352"
 
 [[projects]]
+  branch = "master"
+  digest = "1:8466f8f02821d01876c2955c59174503418869aac1fc6533cf20bddcd8dffbe4"
+  name = "github.com/redhat-developer/devconsole-api"
+  packages = [
+    "pkg/apis",
+    "pkg/apis/devconsole/v1alpha1",
+  ]
+  pruneopts = "NT"
+  revision = "337a67c0dc928d5a01a9f48d989d5ac74ef26e92"
+
+[[projects]]
   digest = "1:fcef1ce61da6f8f6f115154fb0e0e5b159fe11656839ba1e6061372711c013ee"
   name = "github.com/rogpeppe/go-internal"
   packages = [
@@ -666,6 +677,14 @@
   pruneopts = "NT"
   revision = "683ae57f27ac5c2afec902631ed8b9cda1d0f481"
   version = "v1.0.0"
+
+[[projects]]
+  digest = "1:660578a0b729bd1a8b7896a8b390979659000400f4007c659c77165ae48da445"
+  name = "github.com/xanzy/go-gitlab"
+  packages = ["."]
+  pruneopts = "NT"
+  revision = "be70cf752294cc5c6ee89a18d6ba0caca08aa5c7"
+  version = "v0.16.1"
 
 [[projects]]
   digest = "1:3148cb3478c26a92b4c1a18abb9428234b281e278af6267840721a24b6cbc6a3"
@@ -1366,17 +1385,19 @@
   analyzer-version = 1
   input-imports = [
     "github.com/gliderlabs/ssh",
-    "github.com/go-openapi/spec",
     "github.com/google/go-github/github",
     "github.com/operator-framework/operator-sdk/pkg/k8sutil",
     "github.com/operator-framework/operator-sdk/pkg/leader",
     "github.com/operator-framework/operator-sdk/pkg/log/zap",
     "github.com/operator-framework/operator-sdk/pkg/metrics",
     "github.com/operator-framework/operator-sdk/version",
+    "github.com/redhat-developer/devconsole-api/pkg/apis",
+    "github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1",
     "github.com/sirupsen/logrus",
     "github.com/spf13/pflag",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
+    "github.com/xanzy/go-gitlab",
     "golang.org/x/crypto/ssh",
     "golang.org/x/oauth2",
     "gopkg.in/h2non/gock.v1",
@@ -1390,9 +1411,6 @@
     "gopkg.in/src-d/go-git.v4/plumbing/transport/ssh",
     "gopkg.in/src-d/go-git.v4/storage",
     "gopkg.in/src-d/go-git.v4/storage/memory",
-    "k8s.io/apimachinery/pkg/apis/meta/v1",
-    "k8s.io/apimachinery/pkg/runtime",
-    "k8s.io/apimachinery/pkg/runtime/schema",
     "k8s.io/client-go/plugin/pkg/client/auth",
     "k8s.io/code-generator/cmd/client-gen",
     "k8s.io/code-generator/cmd/conversion-gen",
@@ -1402,11 +1420,9 @@
     "k8s.io/code-generator/cmd/lister-gen",
     "k8s.io/gengo/args",
     "k8s.io/kube-openapi/cmd/openapi-gen",
-    "k8s.io/kube-openapi/pkg/common",
     "sigs.k8s.io/controller-runtime/pkg/client/config",
     "sigs.k8s.io/controller-runtime/pkg/manager",
     "sigs.k8s.io/controller-runtime/pkg/runtime/log",
-    "sigs.k8s.io/controller-runtime/pkg/runtime/scheme",
     "sigs.k8s.io/controller-runtime/pkg/runtime/signals",
     "sigs.k8s.io/controller-tools/pkg/crd/generator",
   ]

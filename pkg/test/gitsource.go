@@ -1,6 +1,6 @@
 package test
 
-import "github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1"
+import "github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 
 type GitSourceModifier func(*v1alpha1.GitSource)
 

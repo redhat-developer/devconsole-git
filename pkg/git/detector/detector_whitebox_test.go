@@ -104,9 +104,26 @@ func TestFailingGetLanguagesList(t *testing.T) {
 	require.Nil(t, buildEnvStats)
 }
 
-// ignored tests as they reach the real services
+func TestGitLabDetectorWithToken(t *testing.T) {
+	// given
+	glSource := test.NewGitSource(test.WithURL("https://gitlab.com/matousjobanek/quarkus-knative"))
 
-func XTestGitHubDetectorWithToken(t *testing.T) {
+	// when
+	buildEnvStats, err := DetectBuildEnvironments(glSource, git.NewOauthToken([]byte("")))
+
+	// then
+	require.NoError(t, err)
+	require.Len(t, buildEnvStats.DetectedBuildTools, 1)
+	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTools, Maven, "pom.xml")
+	require.Len(t, buildEnvStats.SortedLanguages, 1)
+	assert.Equal(t, "Java", buildEnvStats.SortedLanguages[0])
+}
+
+// ignored tests as they reach the real services or needs specific credentials
+
+func TestGitHubDetectorWithToken(t *testing.T) {
+	t.Skip("skip to avoid API rate limits")
+
 	token, err := ioutil.ReadFile(homeDir + "/.github-auth")
 	require.NoError(t, err)
 
@@ -117,7 +134,9 @@ func XTestGitHubDetectorWithToken(t *testing.T) {
 	printBuildEnvStats(buildEnvStats)
 }
 
-func XTestGitHubDetectorWithUsernameAndPassword(t *testing.T) {
+func TestGitHubDetectorWithUsernameAndPassword(t *testing.T) {
+	t.Skip("skip to avoid API rate limits")
+
 	ghSource := test.NewGitSource(test.WithURL("https://github.com/wildfly/wildfly"))
 
 	buildEnvStats, err := DetectBuildEnvironments(ghSource, git.NewUsernamePassword("anonymous", ""))
@@ -125,7 +144,8 @@ func XTestGitHubDetectorWithUsernameAndPassword(t *testing.T) {
 	printBuildEnvStats(buildEnvStats)
 }
 
-func XTestGenericGitUsingSshAccessingGitHub(t *testing.T) {
+func TestGenericGitUsingSshAccessingGitHub(t *testing.T) {
+	t.Skip("skip as it depends on ssh key registered in GH")
 
 	buffer, err := ioutil.ReadFile(homeDir + "/.ssh/id_rsa")
 	require.NoError(t, err)
@@ -137,16 +157,8 @@ func XTestGenericGitUsingSshAccessingGitHub(t *testing.T) {
 	printBuildEnvStats(buildEnvStats)
 }
 
-func XTestGitLabDetectorWithToken(t *testing.T) {
-
-	glSource := test.NewGitSource(test.WithURL("https://gitlab.com/gitlab-org/gitlab-qa"))
-
-	buildEnvStats, err := DetectBuildEnvironments(glSource, git.NewOauthToken([]byte("")))
-	require.NoError(t, err)
-	printBuildEnvStats(buildEnvStats)
-}
-
-func XTestGenericGitUsingSshAccessingGitLab(t *testing.T) {
+func TestGenericGitUsingSshAccessingGitLab(t *testing.T) {
+	t.Skip("skip as it depends on ssh key registered in GH")
 
 	buffer, err := ioutil.ReadFile(homeDir + "/.ssh/id_rsa")
 	require.NoError(t, err)
@@ -154,6 +166,16 @@ func XTestGenericGitUsingSshAccessingGitLab(t *testing.T) {
 	ghSource := test.NewGitSource(test.WithURL("git@gitlab.cee.redhat.com:mjobanek/housekeeping.git"))
 
 	buildEnvStats, err := DetectBuildEnvironments(ghSource, git.NewSshKey(buffer, []byte("passphrase")))
+	require.NoError(t, err)
+	printBuildEnvStats(buildEnvStats)
+}
+
+func TestGitLabDetectorWithUsernamePassword(t *testing.T) {
+	t.Skip("skip as GitLab doesn't support authN with empty credential nor with anonymous user")
+
+	glSource := test.NewGitSource(test.WithURL("https://gitlab.com/gitlab-org/gitlab-qa"))
+
+	buildEnvStats, err := DetectBuildEnvironments(glSource, git.NewUsernamePassword("", ""))
 	require.NoError(t, err)
 	printBuildEnvStats(buildEnvStats)
 }

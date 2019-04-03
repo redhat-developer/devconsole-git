@@ -2,7 +2,7 @@ package generic
 
 import (
 	"fmt"
-	"github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1"
+	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/storage"

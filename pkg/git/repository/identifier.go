@@ -3,19 +3,21 @@ package repository
 import (
 	"errors"
 	"fmt"
-	"github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1"
+	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 	gittransport "gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"strings"
 )
 
 const Master = "master"
 
+// StructuredIdentifier is an identifier of git repository that consist of a owner, name and branch
 type StructuredIdentifier struct {
 	Owner  string
 	Name   string
 	Branch string
 }
 
+// NewStructuredIdentifier returns an instance of the StructuredIdentifier for the given v1alpha1.GitSource
 func NewStructuredIdentifier(gitSource *v1alpha1.GitSource, endpoint *gittransport.Endpoint) (StructuredIdentifier, error) {
 	var repo StructuredIdentifier
 	branch := Master
@@ -49,6 +51,7 @@ func NewStructuredIdentifier(gitSource *v1alpha1.GitSource, endpoint *gittranspo
 	}
 }
 
+// OwnerWithName joins owner and name by a slash
 func (i StructuredIdentifier) OwnerWithName() string {
 	return fmt.Sprintf("%s/%s", i.Owner, i.Name)
 }
