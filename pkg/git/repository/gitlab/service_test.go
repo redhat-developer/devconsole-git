@@ -1,15 +1,16 @@
-package github_test
+package gitlab_test
 
 import (
 	"crypto/sha1"
 	"encoding/json"
 	"fmt"
-	gogh "github.com/google/go-github/github"
 	"github.com/redhat-developer/git-service/pkg/git"
-	"github.com/redhat-developer/git-service/pkg/git/repository/github"
+	"github.com/redhat-developer/git-service/pkg/git/repository/gitlab"
 	"github.com/redhat-developer/git-service/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	gogl "github.com/xanzy/go-gitlab"
+	"golang.org/x/oauth2"
 	"gopkg.in/h2non/gock.v1"
 	"math/rand"
 	"strings"
@@ -19,29 +20,26 @@ import (
 const (
 	pathToTestDir  = "../../../test"
 	repoIdentifier = "some-org/some-repo"
-	repoURL        = "https://github.com/" + repoIdentifier
-	notFound       = `{
-  "message": "Not Found",
-  "documentation_url": "https://developer.github.com/v3/...."
-}`
-	apiRateLimit = `{
-  "message": "API rate limit exceeded for 1.2.3.4. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)",
-  "documentation_url": "https://developer.github.com/v3/#rate-limiting"
-}`
+	glHost         = "https://gitlab.com/"
+	repoURL        = glHost + repoIdentifier
+	notFound       = `{"message":"404 Project Not Found"}`
 )
 
 func TestRepositoryServiceForBothAuthMethodsSuccessful(t *testing.T) {
 	// given
 	defer gock.OffAll()
 	usernamePassword := git.NewUsernamePassword("anonymous", "")
+	mockGLCalls(t, glHost, repoIdentifier, "master", "", test.S("pom.xml", "mvnw"), test.S("Java", "Go"))
+
 	oauthToken := git.NewOauthToken([]byte("some-token"))
+	mockGLCalls(t, glHost, repoIdentifier, "master", "some-token", test.S("pom.xml", "mvnw"), test.S("Java", "Go"))
+	mockTokenCall(t)
 
 	for _, secret := range []git.Secret{usernamePassword, oauthToken} {
-		mockGHCalls(t, repoIdentifier, "master", test.S("pom.xml", "mvnw"), test.S("Java", "Go"))
 		source := test.NewGitSource(test.WithURL(repoURL))
 
 		// when
-		service, err := github.NewRepoServiceIfMatches()(source, secret)
+		service, err := gitlab.NewRepoServiceIfMatches()(source, secret)
 
 		// then
 		require.NoError(t, err)
@@ -62,10 +60,10 @@ func TestRepositoryServiceForBothAuthMethodsSuccessful(t *testing.T) {
 
 func TestNewRepoServiceIfMatchesShouldNotMatchWhenSshKey(t *testing.T) {
 	// given
-	source := test.NewGitSource(test.WithURL("git@github.com:" + repoIdentifier))
+	source := test.NewGitSource(test.WithURL("git@gitlab.com:" + repoIdentifier))
 
 	// when
-	service, err := github.NewRepoServiceIfMatches()(source,
+	service, err := gitlab.NewRepoServiceIfMatches()(source,
 		git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte("")))
 
 	// then
@@ -78,7 +76,7 @@ func TestNewRepoServiceIfMatchesShouldNotMatchWhenGitLabHost(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("gitlab.com/" + repoIdentifier))
 
 	// when
-	service, err := github.NewRepoServiceIfMatches()(source, git.NewOauthToken([]byte("some-token")))
+	service, err := gitlab.NewRepoServiceIfMatches()(source, git.NewOauthToken([]byte("some-token")))
 
 	// then
 	assert.NoError(t, err)
@@ -87,10 +85,10 @@ func TestNewRepoServiceIfMatchesShouldNotMatchWhenGitLabHost(t *testing.T) {
 
 func TestNewRepoServiceIfMatchesShouldMatchWhenFlavorIsGitHub(t *testing.T) {
 	// given
-	source := test.NewGitSource(test.WithURL("gitprivatehub.com/"+repoIdentifier), test.WithFlavor("github"))
+	source := test.NewGitSource(test.WithURL("gitprivatelab.com/"+repoIdentifier), test.WithFlavor("gitlab"))
 
 	// when
-	service, err := github.NewRepoServiceIfMatches()(source, git.NewOauthToken([]byte("some-token")))
+	service, err := gitlab.NewRepoServiceIfMatches()(source, git.NewOauthToken([]byte("some-token")))
 
 	// then
 	assert.NoError(t, err)
@@ -99,10 +97,10 @@ func TestNewRepoServiceIfMatchesShouldMatchWhenFlavorIsGitHub(t *testing.T) {
 
 func TestNewRepoServiceIfMatchesShouldNotFailWhenSsh(t *testing.T) {
 	// given
-	source := test.NewGitSource(test.WithURL("git@github.com:" + repoIdentifier))
+	source := test.NewGitSource(test.WithURL("git@gitlab.com:" + repoIdentifier))
 
 	// when
-	service, err := github.NewRepoServiceIfMatches()(source, git.NewOauthToken([]byte("some-token")))
+	service, err := gitlab.NewRepoServiceIfMatches()(source, git.NewOauthToken([]byte("some-token")))
 
 	// then
 	assert.NoError(t, err)
@@ -114,17 +112,18 @@ func TestRepositoryServiceForWrongRepo(t *testing.T) {
 	defer gock.OffAll()
 	usernamePassword := git.NewUsernamePassword("anonymous", "")
 	oauthToken := git.NewOauthToken([]byte("some-token"))
+	mockTokenCall(t)
 
 	for _, secret := range []git.Secret{usernamePassword, oauthToken} {
-		gock.New("https://api.github.com").
-			Get(fmt.Sprintf("/repos/%s/.*", repoIdentifier)).
+		gock.New("https://gitlab.com").
+			Get(fmt.Sprintf("/api/v4/projects/%s/", repoIdentifier)).
 			Times(2).
 			Reply(404).
 			BodyString(notFound)
 		source := test.NewGitSource(test.WithURL(repoURL), test.WithRef("dev"))
 
 		// when
-		service, err := github.NewRepoServiceIfMatches()(source, secret)
+		service, err := gitlab.NewRepoServiceIfMatches()(source, secret)
 
 		// then
 		require.NoError(t, err)
@@ -141,71 +140,87 @@ func TestRepositoryServiceForWrongRepo(t *testing.T) {
 	}
 }
 
-func TestRepositoryServiceReturningRateLimit(t *testing.T) {
+func TestRepositoryServiceForPrivateInstance(t *testing.T) {
 	// given
 	defer gock.OffAll()
-	usernamePassword := git.NewUsernamePassword("anonymous", "")
 	oauthToken := git.NewOauthToken([]byte("some-token"))
 
-	for _, secret := range []git.Secret{usernamePassword, oauthToken} {
-		gock.New("https://api.github.com").
-			Get(fmt.Sprintf("/repos/%s/.*", repoIdentifier)).
-			Times(2).
-			Reply(403).
-			BodyString(apiRateLimit)
-		source := test.NewGitSource(test.WithURL(repoURL))
+	for _, url := range []string{"https://gitlab.cee.redhat.com/" + repoIdentifier, "git@gitlab.cee.redhat.com:" + repoIdentifier} {
+
+		mockGLCalls(t, "https://gitlab.cee.redhat.com/", repoIdentifier, "master", "some-token",
+			test.S("pom.xml", "mvnw"), test.S("Java", "Go"))
+
+		source := test.NewGitSource(test.WithURL(url), test.WithFlavor("gitlab"))
 
 		// when
-		service, err := github.NewRepoServiceIfMatches()(source, secret)
+		service, err := gitlab.NewRepoServiceIfMatches()(source, oauthToken)
 
 		// then
 		require.NoError(t, err)
 
 		filesInRootDir, err := service.GetListOfFilesInRootDir()
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "API rate limit exceeded")
-		require.Len(t, filesInRootDir, 0)
+		require.NoError(t, err)
+		require.Len(t, filesInRootDir, 2)
+		assert.Contains(t, filesInRootDir, "pom.xml")
+		assert.Contains(t, filesInRootDir, "mvnw")
 
 		languageList, err := service.GetLanguageList()
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "API rate limit exceeded")
-		require.Len(t, languageList, 0)
+		require.NoError(t, err)
+		require.Len(t, languageList, 2)
+		assert.Contains(t, languageList, "Java")
+		assert.Contains(t, languageList, "Go")
 	}
 }
 
-func mockGHCalls(t *testing.T, prjPath, branch string, files, langs test.SliceOfStrings) {
-	var entries []gogh.TreeEntry
-	for _, file := range files() {
-		entries = append(entries, gogh.TreeEntry{
-			SHA:  sha(file),
-			Path: String(file),
-		})
+func mockTokenCall(t *testing.T) {
+	token := &oauth2.Token{
+		AccessToken: "some-token",
+		TokenType:   "bearer",
 	}
-	tree := gogh.Tree{
-		SHA:       sha(files()...),
-		Truncated: Boolean(false),
-		Entries:   entries,
-	}
-
-	bytes, err := json.Marshal(tree)
+	bytes, err := json.Marshal(token)
 	require.NoError(t, err)
-
-	gock.New("https://api.github.com").
-		Get(fmt.Sprintf("/repos/%s/git/trees/%s", prjPath, branch)).
+	gock.New("https://gitlab.com").
+		Post("/oauth/token").
 		Reply(200).
 		BodyString(string(bytes))
+}
 
-	languages := map[string]int{}
+func mockGLCalls(t *testing.T, host, prjPath, branch, token string, files, langs test.SliceOfStrings) {
+	var treeNodes []gogl.TreeNode
+	for _, file := range files() {
+		treeNodes = append(treeNodes, gogl.TreeNode{
+			ID:   *sha(file),
+			Path: file,
+			Name: file,
+		})
+	}
+
+	bytes, err := json.Marshal(treeNodes)
+	require.NoError(t, err)
+
+	treeMock := gock.New(host).
+		Get(fmt.Sprintf("/api/v4/projects/%s/repository/tree", prjPath)).
+		MatchParam("ref", branch)
+	if token != "" {
+		treeMock.MatchHeader("Private-Token", token)
+	}
+	treeMock.Reply(200).
+		BodyString(string(bytes))
+
+	languages := map[string]float32{}
 	for _, lang := range langs() {
-		languages[lang] = rand.Int()
+		languages[lang] = rand.Float32()
 	}
 
 	bytes, err = json.Marshal(languages)
 	require.NoError(t, err)
 
-	gock.New("https://api.github.com").
-		Get(fmt.Sprintf("/repos/%s/languages", prjPath)).
-		Reply(200).
+	langsMock := gock.New(host).
+		Get(fmt.Sprintf("/api/v4/projects/%s/languages", prjPath))
+	if token != "" {
+		langsMock.MatchHeader("Private-Token", token)
+	}
+	langsMock.Reply(200).
 		BodyString(string(bytes))
 }
 
@@ -214,8 +229,5 @@ func sha(files ...string) *string {
 }
 
 func String(value string) *string {
-	return &value
-}
-func Boolean(value bool) *bool {
 	return &value
 }

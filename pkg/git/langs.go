@@ -5,6 +5,7 @@ import (
 	"sort"
 )
 
+// SortLanguagesWithInts sorts languages from the given map to a slice where the first one is with the highest number
 func SortLanguagesWithInts(langsWithSizes map[string]int) []string {
 	var contentSizes []string
 	reversedMap := map[string]string{}
@@ -16,6 +17,7 @@ func SortLanguagesWithInts(langsWithSizes map[string]int) []string {
 	return sortLanguages(contentSizes, reversedMap)
 }
 
+// SortLanguagesWithFloats32 sorts languages from the given map to a slice where the first one is with the highest number
 func SortLanguagesWithFloats32(langsWithSizes map[string]float32) []string {
 	var contentSizes []string
 	reversedMap := map[string]string{}

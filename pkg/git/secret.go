@@ -15,9 +15,13 @@ import (
 )
 
 type Secret interface {
+	// GitAuthMethod returns an instance of git AuthMethod for the secret
 	GitAuthMethod() (transport.AuthMethod, error)
+	// Client returns an instance of http.Client for the secret
 	Client() *http.Client
+	// SecretType returns a type of the secret
 	SecretType() string
+	// SecretContent returns an actual content of the secret
 	SecretContent() string
 }
 
@@ -35,6 +39,7 @@ func (k *commonSecretInfo) SecretContent() string {
 }
 
 const (
+	SshKeyType           = "SshKey"
 	OauthTokenType       = "OauthToken"
 	UsernamePasswordType = "UsernamePassword"
 )
@@ -44,7 +49,45 @@ type SshKey struct {
 	passphrase []byte
 }
 
+func NewSshKey(sshKey []byte, passphrase []byte) *SshKey {
+	return &SshKey{
+		commonSecretInfo: &commonSecretInfo{
+			secretType:    SshKeyType,
+			secretContent: bytes.TrimSpace(sshKey),
+		},
+		passphrase: passphrase,
+	}
+}
+
 var allowAll = func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+	return nil
+}
+
+func (k *SshKey) GitAuthMethod() (transport.AuthMethod, error) {
+	var signer ssh.Signer
+	var err error
+	if len(k.passphrase) > 0 {
+		signer, err = ssh.ParsePrivateKeyWithPassphrase(k.secretContent, k.passphrase)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		signer, err = ssh.ParsePrivateKey(k.secretContent)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &gitssh.PublicKeys{
+		User:   "git",
+		Signer: signer,
+		HostKeyCallbackHelper: gitssh.HostKeyCallbackHelper{
+			HostKeyCallback: allowAll,
+		},
+	}, nil
+}
+
+func (k *SshKey) Client() *http.Client {
 	return nil
 }
 

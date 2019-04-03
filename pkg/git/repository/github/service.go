@@ -3,7 +3,7 @@ package github
 import (
 	"context"
 	gogh "github.com/google/go-github/github"
-	"github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1"
+	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
 	gittransport "gopkg.in/src-d/go-git.v4/plumbing/transport"
@@ -21,8 +21,13 @@ type RepositoryService struct {
 	filenames []string
 }
 
+// NewRepoServiceIfMatches returns function creating Github repository service if either host of the git repo URL is github.com
+// or flavor of the given git source is github then, nil otherwise
 func NewRepoServiceIfMatches() repository.ServiceCreator {
 	return func(gitSource *v1alpha1.GitSource, secret git.Secret) (repository.GitService, error) {
+		if secret.SecretType() == git.SshKeyType {
+			return nil, nil
+		}
 		endpoint, err := gittransport.NewEndpoint(gitSource.Spec.URL)
 		if err != nil {
 			return nil, err
