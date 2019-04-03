@@ -104,6 +104,21 @@ func TestFailingGetLanguagesList(t *testing.T) {
 	require.Nil(t, buildEnvStats)
 }
 
+func TestBitbucketDetectorWithToken(t *testing.T) {
+	// given
+	glSource := test.NewGitSource(test.WithURL("https://bitbucket.org/mjobanek-rh/quarkus-knative"))
+
+	// when
+	buildEnvStats, err := DetectBuildEnvironments(glSource, git.NewOauthToken([]byte("")))
+
+	// then
+	require.NoError(t, err)
+	require.Len(t, buildEnvStats.DetectedBuildTools, 1)
+	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTools, Maven, "pom.xml")
+	require.Len(t, buildEnvStats.SortedLanguages, 1)
+	assert.Equal(t, "java", buildEnvStats.SortedLanguages[0])
+}
+
 func TestGitLabDetectorWithToken(t *testing.T) {
 	// given
 	glSource := test.NewGitSource(test.WithURL("https://gitlab.com/matousjobanek/quarkus-knative"))
@@ -166,6 +181,17 @@ func TestGenericGitUsingSshAccessingGitLab(t *testing.T) {
 	ghSource := test.NewGitSource(test.WithURL("git@gitlab.cee.redhat.com:mjobanek/housekeeping.git"))
 
 	buildEnvStats, err := DetectBuildEnvironments(ghSource, git.NewSshKey(buffer, []byte("passphrase")))
+	require.NoError(t, err)
+	printBuildEnvStats(buildEnvStats)
+}
+
+func TestBitbucketDetectorWithUsernameAndPassword(t *testing.T) {
+	t.Skip("skip as Bitbucket doesn't support authN with empty credential nor with anonymous user")
+
+	ghSource := test.NewGitSource(test.WithURL("https://bitbucket.org/atlassian/asap-java"))
+
+	buildEnvStats, err := DetectBuildEnvironments(ghSource, git.NewUsernamePassword("", ""))
+
 	require.NoError(t, err)
 	printBuildEnvStats(buildEnvStats)
 }
