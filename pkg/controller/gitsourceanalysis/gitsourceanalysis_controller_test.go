@@ -1,0 +1,256 @@
+package gitsourceanalysis
+
+import (
+	"context"
+	"encoding/base64"
+	"fmt"
+	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
+	"github.com/redhat-developer/git-service/pkg/controller/common"
+	"github.com/redhat-developer/git-service/pkg/git/detector"
+	"github.com/redhat-developer/git-service/pkg/git/repository"
+	"github.com/redhat-developer/git-service/pkg/test"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"gopkg.in/h2non/gock.v1"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"testing"
+)
+
+const (
+	pathToTestDir  = "../../test"
+	repoIdentifier = "some-org/some-repo"
+	repoGitHubURL  = "https://github.com/" + repoIdentifier
+)
+
+func TestReconcileGitSourceAnalysisFromGitHubWithDefaultCredentials(t *testing.T) {
+	//given
+	defer gock.OffAll()
+	gs := test.NewGitSource(test.WithURL(repoGitHubURL))
+	gsa := test.NewGitSourceAnalysis(test.GitSourceName)
+	reconciler, request, client := PrepareClient(test.GitSourceAnalysisName,
+		test.RegisterGvkObject(v1alpha1.SchemeGroupVersion, gs, gsa))
+	langs := test.S("Java", "Go")
+	test.MockGHCalls(t, repoIdentifier, "master", test.S("pom.xml", "mvnw"), langs, matchBasicAuth("anonymous:"))
+
+	//when
+	_, err := reconciler.Reconcile(request)
+
+	//then
+	require.NoError(t, err)
+
+	assertGitSourceAnalysis(t, client, "", langs, buildType(detector.Maven, "pom.xml"))
+}
+
+func TestReconcileGitSourceAnalysisFromGitHubWithGivenBasicCredentials(t *testing.T) {
+	//given
+	defer gock.OffAll()
+	for _, secretType := range []corev1.SecretType{corev1.SecretTypeOpaque, corev1.SecretTypeBasicAuth} {
+		secret := test.NewSecret(secretType, map[string][]byte{
+			"username": []byte("username"),
+			"password": []byte("password")})
+
+		gs := test.NewGitSource(test.WithURL(repoGitHubURL))
+		gs.Spec.SecretRef = &v1alpha1.SecretRef{Name: test.SecretName}
+		gsa := test.NewGitSourceAnalysis(test.GitSourceName)
+		reconciler, request, client := PrepareClient(test.GitSourceAnalysisName,
+			test.RegisterGvkObject(v1alpha1.SchemeGroupVersion, gs, gsa),
+			test.RegisterGvkObject(corev1.SchemeGroupVersion, secret))
+		langs := test.S("Ruby", "Java", "Go")
+		test.MockGHCalls(t, repoIdentifier, "master", test.S("pom.xml", "main.go"), langs,
+			matchBasicAuth("username:password"))
+
+		//when
+		_, err := reconciler.Reconcile(request)
+
+		//then
+		require.NoError(t, err)
+		assertGitSourceAnalysis(t, client, "", langs,
+			buildType(detector.Maven, "pom.xml"), buildType(detector.Golang, "main.go"))
+	}
+}
+
+func TestReconcileGitSourceAnalysisFromGitHubWithWrongURL(t *testing.T) {
+	//given
+	defer gock.OffAll()
+
+	gs := test.NewGitSource(test.WithURL(repoGitHubURL))
+	gsa := test.NewGitSourceAnalysis(test.GitSourceName)
+	reconciler, request, client := PrepareClient(test.GitSourceAnalysisName,
+		test.RegisterGvkObject(v1alpha1.SchemeGroupVersion, gs, gsa))
+	test.MockNotFoundGitHub(repoIdentifier)
+
+	//when
+	_, err := reconciler.Reconcile(request)
+
+	//then
+	require.NoError(t, err)
+	assertGitSourceAnalysis(t, client, "404 Not Found", nil)
+}
+
+func TestReconcileGitSourceAnalysisFromGitHubWithWrongSecret(t *testing.T) {
+	//given
+	defer gock.OffAll()
+	secret := test.NewSecret(corev1.SecretTypeTLS, map[string][]byte{"tls.crt": []byte("crt")})
+
+	gs := test.NewGitSource(test.WithURL(repoGitHubURL))
+	gs.Spec.SecretRef = &v1alpha1.SecretRef{Name: test.SecretName}
+	gsa := test.NewGitSourceAnalysis(test.GitSourceName)
+	reconciler, request, client := PrepareClient(test.GitSourceAnalysisName,
+		test.RegisterGvkObject(v1alpha1.SchemeGroupVersion, gs, gsa),
+		test.RegisterGvkObject(corev1.SchemeGroupVersion, secret))
+	//when
+	_, err := reconciler.Reconcile(request)
+
+	//then
+	require.NoError(t, err)
+	assertGitSourceAnalysis(t, client,
+		"the provided secret does not contain any of the required parameters: [username,password,ssh-privatekey] or they are empty", nil)
+}
+
+func TestReconcileGitSourceAnalysisFromGitHubWithGivenToken(t *testing.T) {
+	//given
+	defer gock.OffAll()
+	for _, secretType := range []corev1.SecretType{corev1.SecretTypeOpaque, corev1.SecretTypeBasicAuth} {
+		secret := test.NewSecret(secretType, map[string][]byte{"password": []byte("some-token")})
+
+		gs := test.NewGitSource(test.WithURL(repoGitHubURL))
+		gs.Spec.SecretRef = &v1alpha1.SecretRef{Name: test.SecretName}
+		gsa := test.NewGitSourceAnalysis(test.GitSourceName)
+		reconciler, request, client := PrepareClient(test.GitSourceAnalysisName,
+			test.RegisterGvkObject(v1alpha1.SchemeGroupVersion, gs, gsa),
+			test.RegisterGvkObject(corev1.SchemeGroupVersion, secret))
+		langs := test.S("Ruby")
+		test.MockGHCalls(t, repoIdentifier, "master", test.S("Gemfile", "any"), langs,
+			matchToken("some-token"))
+
+		//when
+		_, err := reconciler.Reconcile(request)
+
+		//then
+		require.NoError(t, err)
+		assertGitSourceAnalysis(t, client, "", langs, buildType(detector.Ruby, "Gemfile"))
+	}
+}
+
+func TestReconcileGitSourceAnalysisFromLocalRepoWithSshKey(t *testing.T) {
+	//given
+	defer gock.OffAll()
+	allowedPubKey := test.PublicWithoutPassphrase(t, pathToTestDir)
+	reset := test.RunKeySshServer(t, allowedPubKey)
+	defer reset()
+
+	dummyRepo := test.NewDummyGitRepo(t, repository.Master)
+	dummyRepo.Commit("pom.xml", "mvnw", "src/main/java/Any.java", "pkg/main.go")
+
+	for _, secretType := range []corev1.SecretType{corev1.SecretTypeOpaque, corev1.SecretTypeSSHAuth} {
+		secret := test.NewSecret(secretType, map[string][]byte{
+			"ssh-privatekey": test.PrivateWithoutPassphrase(t, pathToTestDir)})
+
+		gs := test.NewGitSource(test.WithURL("ssh://git@localhost:2222" + dummyRepo.Path))
+		gs.Spec.SecretRef = &v1alpha1.SecretRef{Name: test.SecretName}
+		gsa := test.NewGitSourceAnalysis(test.GitSourceName)
+		reconciler, request, client := PrepareClient(test.GitSourceAnalysisName,
+			test.RegisterGvkObject(v1alpha1.SchemeGroupVersion, gs, gsa),
+			test.RegisterGvkObject(corev1.SchemeGroupVersion, secret))
+
+		//when
+		_, err := reconciler.Reconcile(request)
+
+		//then
+		require.NoError(t, err)
+		assertGitSourceAnalysis(t, client, "", test.S("Java", "Go", "XML"), buildType(detector.Maven, "pom.xml"))
+	}
+}
+
+func TestReconcileGitSourceAnalysisFromLocalRepoWithSshKeyWithPassphrase(t *testing.T) {
+	//given
+	defer gock.OffAll()
+	allowedPubKey := test.PublicWithPassphrase(t, pathToTestDir)
+	reset := test.RunKeySshServer(t, allowedPubKey)
+	defer reset()
+
+	dummyRepo := test.NewDummyGitRepo(t, repository.Master)
+	dummyRepo.Commit("pom.xml", "mvnw", "src/main/java/Any.java", "pkg/main.go")
+
+	for _, secretType := range []corev1.SecretType{corev1.SecretTypeOpaque, corev1.SecretTypeSSHAuth} {
+		secret := test.NewSecret(secretType, map[string][]byte{
+			"ssh-privatekey": test.PrivateWithPassphrase(t, pathToTestDir),
+			"passphrase":     []byte("secret")})
+
+		gs := test.NewGitSource(test.WithURL("ssh://git@localhost:2222" + dummyRepo.Path))
+		gs.Spec.SecretRef = &v1alpha1.SecretRef{Name: test.SecretName}
+		gsa := test.NewGitSourceAnalysis(test.GitSourceName)
+		reconciler, request, client := PrepareClient(test.GitSourceAnalysisName,
+			test.RegisterGvkObject(v1alpha1.SchemeGroupVersion, gs, gsa),
+			test.RegisterGvkObject(corev1.SchemeGroupVersion, secret))
+
+		//when
+		_, err := reconciler.Reconcile(request)
+
+		//then
+		require.NoError(t, err)
+		assertGitSourceAnalysis(t, client, "", test.S("Java", "Go", "XML"), buildType(detector.Maven, "pom.xml"))
+	}
+}
+
+func assertGitSourceAnalysis(t *testing.T, client client.Client, errorMsg string, langs test.SliceOfStrings, buildTypes ...typeWithFiles) {
+	gitSourceAnalysis := &v1alpha1.GitSourceAnalysis{}
+	err := client.Get(context.TODO(), common.NewNsdName(test.Namespace, test.GitSourceAnalysisName), gitSourceAnalysis)
+	require.NoError(t, err)
+
+	if errorMsg != "" {
+		assert.Contains(t, gitSourceAnalysis.Status.Error, errorMsg)
+	} else {
+		assert.Empty(t, gitSourceAnalysis.Status.Error)
+	}
+
+	buildEnvStats := gitSourceAnalysis.Status.BuildEnvStatistics
+	require.Len(t, buildEnvStats.DetectedBuildTypes, len(buildTypes))
+	for _, bt := range buildTypes {
+		tool, files := bt()
+		test.AssertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, tool.Name, tool.Language, files...)
+	}
+
+	if langs != nil {
+		require.Len(t, buildEnvStats.SortedLanguages, len(langs()))
+		for _, lang := range langs() {
+			assert.Contains(t, buildEnvStats.SortedLanguages, lang)
+		}
+	} else {
+		assert.Empty(t, buildEnvStats.SortedLanguages)
+	}
+}
+
+type typeWithFiles func() (detector.BuildTool, []string)
+
+func buildType(tool detector.BuildTool, files ...string) typeWithFiles {
+	return func() (detector.BuildTool, []string) {
+		return tool, files
+	}
+}
+
+func matchBasicAuth(usernameWithPassword string) test.GockModifier {
+	return func(mock *gock.Request) {
+		mock.MatchHeader("Authorization",
+			fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(usernameWithPassword))))
+	}
+}
+
+func matchToken(token string) test.GockModifier {
+	return func(mock *gock.Request) {
+		mock.MatchHeader("Authorization", "Bearer "+token)
+	}
+}
+
+func PrepareClient(name string, gvkObjects ...test.GvkObject) (*ReconcileGitSourceAnalysis, reconcile.Request, client.Client) {
+	// Create a fake client to mock API calls.
+	cl, s := test.PrepareClient(gvkObjects...)
+
+	// Create a ReconcileToolChainEnabler object with the scheme and fake client.
+	r := &ReconcileGitSourceAnalysis{client: cl, scheme: s}
+	req := test.NewReconcileRequest(name)
+
+	return r, req, cl
+}

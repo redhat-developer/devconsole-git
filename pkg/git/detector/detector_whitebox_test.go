@@ -271,6 +271,10 @@ func TestGitLabDetectorWithUsernamePassword(t *testing.T) {
 	printBuildEnvStats(buildEnvStats)
 }
 
+func assertContainsBuildTool(t *testing.T, detected []v1alpha1.DetectedBuildType, buildTool BuildTool, files ...string) {
+	test.AssertContainsBuildTool(t, detected, buildTool.Name, buildTool.Language, files...)
+}
+
 func printBuildEnvStats(buildEnvStats *v1alpha1.BuildEnvStats) {
 	fmt.Println(buildEnvStats.SortedLanguages)
 	for _, build := range buildEnvStats.DetectedBuildTypes {
