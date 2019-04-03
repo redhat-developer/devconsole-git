@@ -3,7 +3,7 @@ package repository
 import (
 	"errors"
 	"fmt"
-	"github.com/redhat-developer/git-service/pkg/apis/devconsole/v1alpha1"
+	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 	gittransport "gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"strings"
 )

@@ -542,6 +542,17 @@
   revision = "55ae3d9d557340b5bc24cd8aa5f6fa2c2ab31352"
 
 [[projects]]
+  branch = "master"
+  digest = "1:06f87f10b8d2fc1eb0d294ca7c5ac24f8cdb501f42c8f26ef1069ede60c61b7a"
+  name = "github.com/redhat-developer/devconsole-api"
+  packages = [
+    "pkg/apis",
+    "pkg/apis/devconsole/v1alpha1",
+  ]
+  pruneopts = "NT"
+  revision = "d581e5fd7df38bc43431e27a347a753b63b3b63d"
+
+[[projects]]
   digest = "1:fcef1ce61da6f8f6f115154fb0e0e5b159fe11656839ba1e6061372711c013ee"
   name = "github.com/rogpeppe/go-internal"
   packages = [
@@ -1227,13 +1238,14 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/go-openapi/spec",
     "github.com/google/go-github/github",
     "github.com/operator-framework/operator-sdk/pkg/k8sutil",
     "github.com/operator-framework/operator-sdk/pkg/leader",
     "github.com/operator-framework/operator-sdk/pkg/log/zap",
     "github.com/operator-framework/operator-sdk/pkg/metrics",
     "github.com/operator-framework/operator-sdk/version",
+    "github.com/redhat-developer/devconsole-api/pkg/apis",
+    "github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1",
     "github.com/spf13/pflag",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
@@ -1242,9 +1254,6 @@
     "gopkg.in/h2non/gock.v1",
     "gopkg.in/src-d/go-git.v4/plumbing/transport",
     "gopkg.in/src-d/go-git.v4/plumbing/transport/ssh",
-    "k8s.io/apimachinery/pkg/apis/meta/v1",
-    "k8s.io/apimachinery/pkg/runtime",
-    "k8s.io/apimachinery/pkg/runtime/schema",
     "k8s.io/client-go/plugin/pkg/client/auth",
     "k8s.io/code-generator/cmd/client-gen",
     "k8s.io/code-generator/cmd/conversion-gen",
@@ -1254,11 +1263,9 @@
     "k8s.io/code-generator/cmd/lister-gen",
     "k8s.io/gengo/args",
     "k8s.io/kube-openapi/cmd/openapi-gen",
-    "k8s.io/kube-openapi/pkg/common",
     "sigs.k8s.io/controller-runtime/pkg/client/config",
     "sigs.k8s.io/controller-runtime/pkg/manager",
     "sigs.k8s.io/controller-runtime/pkg/runtime/log",
-    "sigs.k8s.io/controller-runtime/pkg/runtime/scheme",
     "sigs.k8s.io/controller-runtime/pkg/runtime/signals",
     "sigs.k8s.io/controller-tools/pkg/crd/generator",
   ]
