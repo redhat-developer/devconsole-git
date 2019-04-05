@@ -21,6 +21,20 @@ func TestSortLanguagesWithInts(t *testing.T) {
 	assert.Equal(t, "Go", languages[2])
 }
 
+func TestSortLanguagesWithBiggerInts(t *testing.T) {
+	// given
+	langs := map[string]int{"Go": 345, "Java": 2345, "Ruby": 12345}
+
+	// when
+	languages := git.SortLanguagesWithInts(langs)
+
+	// then
+	require.Len(t, languages, 3)
+	assert.Equal(t, "Ruby", languages[0])
+	assert.Equal(t, "Java", languages[1])
+	assert.Equal(t, "Go", languages[2])
+}
+
 func TestSortLanguagesWithIntsWhenAllNumbersAreSame(t *testing.T) {
 	// given
 	langs := map[string]int{"Go": 1, "Java": 1, "Ruby": 1}
@@ -52,6 +66,20 @@ func TestSortLanguagesWithIntsWhenOneNumberIsBigger(t *testing.T) {
 func TestSortLanguagesWithFloats32(t *testing.T) {
 	// given
 	langs := map[string]float32{"Go": 1.9, "Java": 2.0, "Ruby": 2.0001}
+
+	// when
+	languages := git.SortLanguagesWithFloats32(langs)
+
+	// then
+	require.Len(t, languages, 3)
+	assert.Equal(t, "Ruby", languages[0])
+	assert.Equal(t, "Java", languages[1])
+	assert.Equal(t, "Go", languages[2])
+}
+
+func TestSortLanguagesWithBiggerFloats32(t *testing.T) {
+	// given
+	langs := map[string]float32{"Go": 3.45, "Java": 23.45, "Ruby": 123.45}
 
 	// when
 	languages := git.SortLanguagesWithFloats32(langs)

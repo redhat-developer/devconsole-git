@@ -1,40 +1,46 @@
 package git
 
 import (
-	"fmt"
 	"sort"
 )
 
 // SortLanguagesWithInts sorts languages from the given map to a slice where the first one is with the highest number
-func SortLanguagesWithInts(langsWithSizes map[string]int) []string {
-	var contentSizes []string
-	reversedMap := map[string]string{}
-	for lang, size := range langsWithSizes {
-		key := fmt.Sprintf("%d_%s", size, lang)
-		reversedMap[key] = lang
-		contentSizes = append(contentSizes, key)
+func SortLanguagesWithInts(languages map[string]int) []string {
+	var langsWithRatio []langWithRatio
+	for lang, ratio := range languages {
+		langsWithRatio = append(langsWithRatio, langWithRatio{ratio: float64(ratio), lang: lang})
 	}
-	return sortLanguages(contentSizes, reversedMap)
+	return sortLangs(langsWithRatio)
 }
 
 // SortLanguagesWithFloats32 sorts languages from the given map to a slice where the first one is with the highest number
-func SortLanguagesWithFloats32(langsWithSizes map[string]float32) []string {
-	var contentSizes []string
-	reversedMap := map[string]string{}
-	for lang, size := range langsWithSizes {
-		key := fmt.Sprintf("%f_%s", size, lang)
-		reversedMap[key] = lang
-		contentSizes = append(contentSizes, key)
+func SortLanguagesWithFloats32(languages map[string]float32) []string {
+	var langsWithRatio []langWithRatio
+	for lang, ratio := range languages {
+		langsWithRatio = append(langsWithRatio, langWithRatio{ratio: float64(ratio), lang: lang})
 	}
-	return sortLanguages(contentSizes, reversedMap)
+	return sortLangs(langsWithRatio)
 }
 
-func sortLanguages(contentSizes []string, reversedMap map[string]string) []string {
-	sort.Strings(contentSizes)
+func sortLangs(langsWithRatio []langWithRatio) []string {
+	sort.Sort(byRatio(langsWithRatio))
 
 	var sortedLangs []string
-	for i := len(contentSizes) - 1; i >= 0; i-- {
-		sortedLangs = append(sortedLangs, reversedMap[contentSizes[i]])
+	for _, sortedLang := range langsWithRatio {
+		sortedLangs = append(sortedLangs, sortedLang.lang)
 	}
 	return sortedLangs
+}
+
+type langWithRatio struct {
+	ratio float64
+	lang  string
+}
+
+type byRatio []langWithRatio
+
+func (a byRatio) Len() int      { return len(a) }
+func (a byRatio) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a byRatio) Less(i, j int) bool {
+	return a[i].ratio > a[j].ratio
 }
