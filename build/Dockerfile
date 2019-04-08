@@ -1,7 +1,15 @@
 FROM alpine:3.8
 
-RUN apk upgrade --update --no-cache
+ENV OPERATOR=/usr/local/bin/devconsole-git \
+    USER_UID=1001 \
+    USER_NAME=devconsole-git
 
-USER nobody
+# install operator binary
+COPY build/_output/bin/devconsole-git ${OPERATOR}
 
-ADD build/_output/bin/git-operator /usr/local/bin/git-operator
+COPY build/bin /usr/local/bin
+RUN  /usr/local/bin/user_setup
+
+ENTRYPOINT ["/usr/local/bin/entrypoint"]
+
+USER ${USER_UID}
