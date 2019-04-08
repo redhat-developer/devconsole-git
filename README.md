@@ -22,3 +22,7 @@ make build
 make clean
 ```
 
+[dep_tool]:https://golang.github.io/dep/docs/installation.html
+[go_tool]:https://golang.org/dl/
+[git_tool]:https://git-scm.com/downloads
+[docker_tool]:https://docs.docker.com/install/
