@@ -40,7 +40,7 @@ func (s *DummyService) GetLanguageList() ([]string, error) {
 }
 
 func (s *DummyService) Creator() repository.ServiceCreator {
-	return func(gitSource *v1alpha1.GitSource, secret git.Secret) (service repository.GitService, e error) {
+	return func(gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (service repository.GitService, e error) {
 		if s.shouldFail {
 			return nil, fmt.Errorf("creation failed")
 		}

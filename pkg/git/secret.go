@@ -14,6 +14,28 @@ import (
 	gitssh "gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
 )
 
+type SecretProvider struct {
+	secret Secret
+}
+
+func NewSecretProvider(secret Secret) *SecretProvider {
+	return &SecretProvider{secret: secret}
+}
+
+func (p *SecretProvider) GetSecret(defaultSecret Secret) Secret {
+	if p.secret == nil {
+		return defaultSecret
+	}
+	return p.secret
+}
+
+func (p *SecretProvider) SecretType() string {
+	if p.secret == nil {
+		return ""
+	}
+	return p.secret.SecretType()
+}
+
 type Secret interface {
 	// GitAuthMethod returns an instance of git AuthMethod for the secret
 	GitAuthMethod() (transport.AuthMethod, error)

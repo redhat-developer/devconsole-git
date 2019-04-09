@@ -30,9 +30,9 @@ type treeLoader struct {
 	tree *object.Tree
 }
 
-func NewRepositoryService(gitSource *v1alpha1.GitSource, secret git.Secret) (repository.GitService, error) {
+func NewRepositoryService(gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (repository.GitService, error) {
 	storage := memory.NewStorage()
-	return newRepositoryService(gitSource, secret, storage)
+	return newRepositoryService(gitSource, secretProvider.GetSecret(nil), storage)
 }
 
 func newRepositoryService(gitSource *v1alpha1.GitSource, secret git.Secret, storage storage.Storer) (*RepositoryService, error) {
@@ -47,9 +47,13 @@ func newRepositoryService(gitSource *v1alpha1.GitSource, secret git.Secret, stor
 		URLs:  []string{gitSource.Spec.URL},
 		Fetch: []config.RefSpec{config.RefSpec(refSpec)},
 	})
-	authMethod, err := secret.GitAuthMethod()
-	if err != nil {
-		return nil, err
+
+	var authMethod transport.AuthMethod
+	if secret != nil {
+		authMethod, err = secret.GitAuthMethod()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	service := &RepositoryService{

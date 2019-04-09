@@ -20,11 +20,11 @@ func TestNewRepositoryServiceForAllSecretsAndMethods(t *testing.T) {
 	usernamePassword := git.NewUsernamePassword("anonymous", "")
 	oauthToken := git.NewOauthToken([]byte("some-token"))
 
-	for _, secret := range []git.Secret{sshKey, usernamePassword, oauthToken} {
+	for _, secret := range []git.Secret{sshKey, usernamePassword, oauthToken, nil} {
 		source := test.NewGitSource(test.WithURL(dummyRepo.Path))
 
 		// when
-		service, err := generic.NewRepositoryService(source, secret)
+		service, err := generic.NewRepositoryService(source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)
@@ -53,7 +53,7 @@ func TestNewRepositoryServiceShouldReturnFilesAddedByMultipleCommits(t *testing.
 
 	// when
 	service, err := generic.NewRepositoryService(source,
-		git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte("")))
+		git.NewSecretProvider(git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte(""))))
 
 	// then
 	require.NoError(t, err)
@@ -73,7 +73,7 @@ func TestNewRepositoryServiceWithEmptyMasterBranch(t *testing.T) {
 
 	// when
 	service, err := generic.NewRepositoryService(source,
-		git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte("")))
+		git.NewSecretProvider(git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte(""))))
 
 	// then
 	require.NoError(t, err)
@@ -94,7 +94,7 @@ func TestNewRepositoryServiceWithOtherThanMasterBranch(t *testing.T) {
 
 	// when
 	service, err := generic.NewRepositoryService(source,
-		git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte("")))
+		git.NewSecretProvider(git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte(""))))
 
 	// then
 	require.NoError(t, err)
@@ -117,7 +117,7 @@ func TestNewRepositoryServiceShouldLoadFilesOnlyOnce(t *testing.T) {
 	source := test.NewGitSource(test.WithURL(dummyRepo.Path))
 
 	service, err := generic.NewRepositoryService(source,
-		git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte("")))
+		git.NewSecretProvider(git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte(""))))
 	require.NoError(t, err)
 
 	// when
@@ -152,7 +152,7 @@ func TestNewRepositoryServiceUsingSSh(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("ssh://git@localhost:2222" + dummyRepo.Path))
 
 	service, err := generic.NewRepositoryService(source,
-		git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte("")))
+		git.NewSecretProvider(git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte(""))))
 	require.NoError(t, err)
 
 	// when
@@ -179,7 +179,7 @@ func TestNewRepositoryServiceUsingSShWithWrongKey(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("ssh://git@localhost:2222" + dummyRepo.Path))
 
 	service, err := generic.NewRepositoryService(source,
-		git.NewSshKey(test.PrivateWithPassphrase(t, pathToTestDir), []byte("secret")))
+		git.NewSecretProvider(git.NewSshKey(test.PrivateWithPassphrase(t, pathToTestDir), []byte("secret"))))
 	require.NoError(t, err)
 
 	// when
@@ -207,7 +207,7 @@ func TestNewRepositoryServiceUsingBasicSShAuth(t *testing.T) {
 	for _, secret := range []git.Secret{usernamePassword, oauthToken} {
 		source := test.NewGitSource(test.WithURL("ssh://git@localhost:2222" + dummyRepo.Path))
 
-		service, err := generic.NewRepositoryService(source, secret)
+		service, err := generic.NewRepositoryService(source, git.NewSecretProvider(secret))
 		require.NoError(t, err)
 
 		// when
@@ -236,7 +236,7 @@ func TestNewRepositoryServiceUsingBasicSShAuthWithWrongPassword(t *testing.T) {
 	for _, secret := range []git.Secret{usernamePassword, oauthToken} {
 		source := test.NewGitSource(test.WithURL("ssh://git@localhost:2222" + dummyRepo.Path))
 
-		service, err := generic.NewRepositoryService(source, secret)
+		service, err := generic.NewRepositoryService(source, git.NewSecretProvider(secret))
 		require.NoError(t, err)
 
 		// when

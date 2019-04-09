@@ -22,18 +22,22 @@ const (
 	tokenExpiredResp = `{"type": "error", "error": {"message": "Access token expired. Use your refresh token to obtain a new access token."}}`
 )
 
-func TestRepositoryServiceForBothAuthMethodsSuccessful(t *testing.T) {
+var (
+	usernamePassword = git.NewUsernamePassword("anonymous", "")
+	oauthToken       = git.NewOauthToken([]byte("some-token"))
+	validSecrets     = []git.Secret{usernamePassword, oauthToken, nil}
+)
+
+func TestRepositoryServiceForAllValidAuthMethodsSuccessful(t *testing.T) {
 	// given
 	defer gock.OffAll()
-	usernamePassword := git.NewUsernamePassword("anonymous", "")
-	oauthToken := git.NewOauthToken([]byte("some-token"))
 
-	for _, secret := range []git.Secret{usernamePassword, oauthToken} {
+	for _, secret := range validSecrets {
 		mockBBCalls(t, bbApiHost, repoIdentifier, "master", "Java", test.S("pom.xml", "mvnw"))
 		source := test.NewGitSource(test.WithURL(repoURL))
 
 		// when
-		service, err := bitbucket.NewRepoServiceIfMatches()(source, secret)
+		service, err := bitbucket.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)
@@ -56,7 +60,8 @@ func TestNewRepoServiceIfMatchesShouldNotMatchWhenGitLabHost(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("gitlab.com/" + repoIdentifier))
 
 	// when
-	service, err := bitbucket.NewRepoServiceIfMatches()(source, git.NewOauthToken([]byte("some-token")))
+	service, err := bitbucket.NewRepoServiceIfMatches()(source,
+		git.NewSecretProvider(git.NewOauthToken([]byte("some-token"))))
 
 	// then
 	assert.NoError(t, err)
@@ -68,7 +73,8 @@ func TestNewRepoServiceIfMatchesShouldMatchWhenFlavorIsBitbucket(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("bitprivatebucket.org/"+repoIdentifier), test.WithFlavor("bitbucket"))
 
 	// when
-	service, err := bitbucket.NewRepoServiceIfMatches()(source, git.NewOauthToken([]byte("some-token")))
+	service, err := bitbucket.NewRepoServiceIfMatches()(source,
+		git.NewSecretProvider(git.NewOauthToken([]byte("some-token"))))
 
 	// then
 	assert.NoError(t, err)
@@ -80,7 +86,8 @@ func TestNewRepoServiceIfMatchesShouldNotFailWhenSsh(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("mjobanek@bitbucket.org:" + repoIdentifier + ".git"))
 
 	// when
-	service, err := bitbucket.NewRepoServiceIfMatches()(source, git.NewOauthToken([]byte("some-token")))
+	service, err := bitbucket.NewRepoServiceIfMatches()(source,
+		git.NewSecretProvider(git.NewOauthToken([]byte("some-token"))))
 
 	// then
 	assert.NoError(t, err)
@@ -90,10 +97,8 @@ func TestNewRepoServiceIfMatchesShouldNotFailWhenSsh(t *testing.T) {
 func TestRepositoryServiceForWrongBranch(t *testing.T) {
 	// given
 	defer gock.OffAll()
-	usernamePassword := git.NewUsernamePassword("anonymous", "")
-	oauthToken := git.NewOauthToken([]byte("some-token"))
 
-	for _, secret := range []git.Secret{usernamePassword, oauthToken} {
+	for _, secret := range validSecrets {
 		gock.New(bbApiHost).
 			Get(fmt.Sprintf("/2.0/repositories/%s/.*", repoIdentifier)).
 			Times(2).
@@ -102,7 +107,7 @@ func TestRepositoryServiceForWrongBranch(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(repoURL), test.WithRef("dev"))
 
 		// when
-		service, err := bitbucket.NewRepoServiceIfMatches()(source, secret)
+		service, err := bitbucket.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)
@@ -120,10 +125,8 @@ func TestRepositoryServiceForWrongBranch(t *testing.T) {
 func TestRepositoryServiceForWrongRepo(t *testing.T) {
 	// given
 	defer gock.OffAll()
-	usernamePassword := git.NewUsernamePassword("anonymous", "")
-	oauthToken := git.NewOauthToken([]byte("some-token"))
 
-	for _, secret := range []git.Secret{usernamePassword, oauthToken} {
+	for _, secret := range validSecrets {
 		gock.New(bbApiHost).
 			Get("/2.0/repositories/some-non-existing-org/some-repo/.*").
 			Times(2).
@@ -132,7 +135,7 @@ func TestRepositoryServiceForWrongRepo(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(bbHost + "some-non-existing-org/some-repo"))
 
 		// when
-		service, err := bitbucket.NewRepoServiceIfMatches()(source, secret)
+		service, err := bitbucket.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)
@@ -156,10 +159,8 @@ func assertErrorIsNotFound(t *testing.T, err error, repo, msg string) {
 func TestRepositoryServiceReturningForbidden(t *testing.T) {
 	// given
 	defer gock.OffAll()
-	usernamePassword := git.NewUsernamePassword("anonymous", "")
-	oauthToken := git.NewOauthToken([]byte("some-token"))
 
-	for _, secret := range []git.Secret{usernamePassword, oauthToken} {
+	for _, secret := range validSecrets {
 		gock.New(bbApiHost).
 			Get(fmt.Sprintf("/2.0/repositories/%s/.*", repoIdentifier)).
 			Times(2).
@@ -168,7 +169,7 @@ func TestRepositoryServiceReturningForbidden(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(repoURL))
 
 		// when
-		service, err := bitbucket.NewRepoServiceIfMatches()(source, secret)
+		service, err := bitbucket.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)
@@ -202,7 +203,7 @@ func TestRepositoryServiceReturningTokenExpired(t *testing.T) {
 	source := test.NewGitSource(test.WithURL(repoURL))
 
 	// when
-	service, err := bitbucket.NewRepoServiceIfMatches()(source, oauthToken)
+	service, err := bitbucket.NewRepoServiceIfMatches()(source, git.NewSecretProvider(oauthToken))
 
 	// then
 	require.NoError(t, err)
@@ -234,7 +235,7 @@ func TestRepositoryServiceForPrivateInstance(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(url), test.WithFlavor("bitbucket"))
 
 		// when
-		service, err := bitbucket.NewRepoServiceIfMatches()(source, oauthToken)
+		service, err := bitbucket.NewRepoServiceIfMatches()(source, git.NewSecretProvider(oauthToken))
 
 		// then
 		require.NoError(t, err)
@@ -255,11 +256,9 @@ func TestRepositoryServiceForPrivateInstance(t *testing.T) {
 func TestRepositoryServiceWithPaginatedResult(t *testing.T) {
 	// given
 	defer gock.OffAll()
-	usernamePassword := git.NewUsernamePassword("anonymous", "")
-	oauthToken := git.NewOauthToken([]byte("some-token"))
 	baseURL := fmt.Sprintf(`%s2.0/repositories/%s/src/master/?q=type="commit_file"`, bbApiHost, repoIdentifier)
 
-	for _, secret := range []git.Secret{usernamePassword, oauthToken} {
+	for _, secret := range validSecrets {
 		mockBBFilesCall(t, bbApiHost, repoIdentifier, "master", "", baseURL+"&page=8xhd", test.S("pom.xml"))
 		mockBBFilesCall(t, bbApiHost, repoIdentifier, "master", "8xhd", baseURL+"&page=dbtR", test.S("mvnw"))
 		mockBBFilesCall(t, bbApiHost, repoIdentifier, "master", "dbtR", "", test.S("any"))
@@ -268,7 +267,7 @@ func TestRepositoryServiceWithPaginatedResult(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(repoURL))
 
 		// when
-		service, err := bitbucket.NewRepoServiceIfMatches()(source, secret)
+		service, err := bitbucket.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)

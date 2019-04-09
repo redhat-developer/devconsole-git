@@ -19,18 +19,25 @@ var gitServiceCreators = []repository.ServiceCreator{
 	gitlab.NewRepoServiceIfMatches(),
 }
 
-// DetectBuildEnvironments detects build tools and languages in the git repository defined by the given v1alpha1.GitSource
-func DetectBuildEnvironments(gitSource *v1alpha1.GitSource, secret git.Secret) (*BuildEnvStats, error) {
-	return detectBuildEnvs(gitSource, secret, gitServiceCreators)
+// DetectBuildEnvironmentsWithSecret detects build tools and languages using the given secret in the git repository
+// defined by the given v1alpha1.GitSource
+func DetectBuildEnvironmentsWithSecret(gitSource *v1alpha1.GitSource, secret git.Secret) (*BuildEnvStats, error) {
+	return detectBuildEnvs(gitSource, git.NewSecretProvider(secret), gitServiceCreators)
 }
 
-func detectBuildEnvs(gitSource *v1alpha1.GitSource, secret git.Secret, serviceCreators []repository.ServiceCreator) (*BuildEnvStats, error) {
-	service, err := repository.NewGitService(gitSource, secret, serviceCreators)
+// DetectBuildEnvironments detects build tools and languages using the default secret in the git repository
+// defined by the given v1alpha1.GitSource
+func DetectBuildEnvironments(gitSource *v1alpha1.GitSource) (*BuildEnvStats, error) {
+	return detectBuildEnvs(gitSource, git.NewSecretProvider(nil), gitServiceCreators)
+}
+
+func detectBuildEnvs(gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider, serviceCreators []repository.ServiceCreator) (*BuildEnvStats, error) {
+	service, err := repository.NewGitService(gitSource, secretProvider, serviceCreators)
 	if err != nil {
 		return nil, err
 	}
 	if service == nil {
-		service, err = generic.NewRepositoryService(gitSource, secret)
+		service, err = generic.NewRepositoryService(gitSource, secretProvider)
 		if err != nil {
 			return nil, err
 		}
