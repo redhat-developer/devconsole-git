@@ -150,3 +150,27 @@ func TestNewUsernamePassword(t *testing.T) {
 	require.NoError(t, err)
 	assertBasicAuth(t, method, "username", "password")
 }
+
+func TestNewSecretProviderWithSecretSet(t *testing.T) {
+	// given
+	oauthToken := git.NewOauthToken([]byte("some-token"))
+	secretProvider := git.NewSecretProvider(oauthToken)
+
+	// when
+	secret := secretProvider.GetSecret(git.NewUsernamePassword("anonymous", ""))
+
+	// then
+	assert.Equal(t, oauthToken, secret)
+}
+
+func TestNewSecretProviderWithSecretNotSet(t *testing.T) {
+	// given
+	secretProvider := git.NewSecretProvider(nil)
+	usernamePassword := git.NewUsernamePassword("anonymous", "")
+
+	// when
+	secret := secretProvider.GetSecret(usernamePassword)
+
+	// then
+	assert.Equal(t, usernamePassword, secret)
+}

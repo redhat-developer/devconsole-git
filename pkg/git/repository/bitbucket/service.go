@@ -25,12 +25,16 @@ type RepositoryService struct {
 }
 
 func NewRepoServiceIfMatches() repository.ServiceCreator {
-	return func(gitSource *v1alpha1.GitSource, secret git.Secret) (repository.GitService, error) {
+	return func(gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (repository.GitService, error) {
+		if secretProvider.SecretType() == git.SshKeyType {
+			return nil, nil
+		}
 		endpoint, err := gittransport.NewEndpoint(gitSource.Spec.URL)
 		if err != nil {
 			return nil, err
 		}
 		if endpoint.Host == bitbucketHost || gitSource.Spec.Flavor == bitbucketFlavor {
+			secret := secretProvider.GetSecret(git.NewOauthToken([]byte("")))
 			return newBbService(gitSource, endpoint, secret)
 		}
 		return nil, nil

@@ -25,21 +25,25 @@ const (
 	notFound       = `{"message":"404 Project Not Found"}`
 )
 
-func TestRepositoryServiceForBothAuthMethodsSuccessful(t *testing.T) {
+var (
+	usernamePassword = git.NewUsernamePassword("anonymous", "")
+	oauthToken       = git.NewOauthToken([]byte("some-token"))
+	validSecrets     = []git.Secret{usernamePassword, oauthToken, nil}
+)
+
+func TestRepositoryServiceForAllValidAuthMethodsSuccessful(t *testing.T) {
 	// given
 	defer gock.OffAll()
-	usernamePassword := git.NewUsernamePassword("anonymous", "")
+	mockGLCalls(t, glHost, repoIdentifier, "master", "", test.S("pom.xml", "mvnw"), test.S("Java", "Go"))
+	mockTokenCall(t)
+	mockGLCalls(t, glHost, repoIdentifier, "master", "some-token", test.S("pom.xml", "mvnw"), test.S("Java", "Go"))
 	mockGLCalls(t, glHost, repoIdentifier, "master", "", test.S("pom.xml", "mvnw"), test.S("Java", "Go"))
 
-	oauthToken := git.NewOauthToken([]byte("some-token"))
-	mockGLCalls(t, glHost, repoIdentifier, "master", "some-token", test.S("pom.xml", "mvnw"), test.S("Java", "Go"))
-	mockTokenCall(t)
-
-	for _, secret := range []git.Secret{usernamePassword, oauthToken} {
+	for _, secret := range validSecrets {
 		source := test.NewGitSource(test.WithURL(repoURL))
 
 		// when
-		service, err := gitlab.NewRepoServiceIfMatches()(source, secret)
+		service, err := gitlab.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)
@@ -64,7 +68,7 @@ func TestNewRepoServiceIfMatchesShouldNotMatchWhenSshKey(t *testing.T) {
 
 	// when
 	service, err := gitlab.NewRepoServiceIfMatches()(source,
-		git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte("")))
+		git.NewSecretProvider(git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte(""))))
 
 	// then
 	assert.NoError(t, err)
@@ -76,7 +80,8 @@ func TestNewRepoServiceIfMatchesShouldNotMatchWhenGitLabHost(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("gitlab.com/" + repoIdentifier))
 
 	// when
-	service, err := gitlab.NewRepoServiceIfMatches()(source, git.NewOauthToken([]byte("some-token")))
+	service, err := gitlab.NewRepoServiceIfMatches()(source,
+		git.NewSecretProvider(git.NewOauthToken([]byte("some-token"))))
 
 	// then
 	assert.NoError(t, err)
@@ -88,7 +93,8 @@ func TestNewRepoServiceIfMatchesShouldMatchWhenFlavorIsGitHub(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("gitprivatelab.com/"+repoIdentifier), test.WithFlavor("gitlab"))
 
 	// when
-	service, err := gitlab.NewRepoServiceIfMatches()(source, git.NewOauthToken([]byte("some-token")))
+	service, err := gitlab.NewRepoServiceIfMatches()(source,
+		git.NewSecretProvider(git.NewOauthToken([]byte("some-token"))))
 
 	// then
 	assert.NoError(t, err)
@@ -100,7 +106,8 @@ func TestNewRepoServiceIfMatchesShouldNotFailWhenSsh(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("git@gitlab.com:" + repoIdentifier))
 
 	// when
-	service, err := gitlab.NewRepoServiceIfMatches()(source, git.NewOauthToken([]byte("some-token")))
+	service, err := gitlab.NewRepoServiceIfMatches()(source,
+		git.NewSecretProvider(git.NewOauthToken([]byte("some-token"))))
 
 	// then
 	assert.NoError(t, err)
@@ -110,11 +117,9 @@ func TestNewRepoServiceIfMatchesShouldNotFailWhenSsh(t *testing.T) {
 func TestRepositoryServiceForWrongRepo(t *testing.T) {
 	// given
 	defer gock.OffAll()
-	usernamePassword := git.NewUsernamePassword("anonymous", "")
-	oauthToken := git.NewOauthToken([]byte("some-token"))
 	mockTokenCall(t)
 
-	for _, secret := range []git.Secret{usernamePassword, oauthToken} {
+	for _, secret := range validSecrets {
 		gock.New("https://gitlab.com").
 			Get(fmt.Sprintf("/api/v4/projects/%s/", repoIdentifier)).
 			Times(2).
@@ -123,7 +128,7 @@ func TestRepositoryServiceForWrongRepo(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(repoURL), test.WithRef("dev"))
 
 		// when
-		service, err := gitlab.NewRepoServiceIfMatches()(source, secret)
+		service, err := gitlab.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)
@@ -153,7 +158,7 @@ func TestRepositoryServiceForPrivateInstance(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(url), test.WithFlavor("gitlab"))
 
 		// when
-		service, err := gitlab.NewRepoServiceIfMatches()(source, oauthToken)
+		service, err := gitlab.NewRepoServiceIfMatches()(source, git.NewSecretProvider(oauthToken))
 
 		// then
 		require.NoError(t, err)
