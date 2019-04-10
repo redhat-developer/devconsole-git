@@ -2,6 +2,7 @@ package detector
 
 import (
 	"fmt"
+	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
 	"github.com/redhat-developer/git-service/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -42,7 +43,7 @@ func TestDetectBuildEnvsShouldUseGenericGitIfNotOtherMatches(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, buildEnvStats)
 
-	buildTools := buildEnvStats.DetectedBuildTools
+	buildTools := buildEnvStats.DetectedBuildTypes
 	require.Len(t, buildTools, 2)
 
 	assertContainsBuildTool(t, buildTools, Maven, "pom.xml")
@@ -113,8 +114,8 @@ func TestBitbucketDetectorWithDefault(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	require.Len(t, buildEnvStats.DetectedBuildTools, 1)
-	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTools, Maven, "pom.xml")
+	require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
+	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, Maven, "pom.xml")
 	require.Len(t, buildEnvStats.SortedLanguages, 1)
 	assert.Equal(t, "java", buildEnvStats.SortedLanguages[0])
 }
@@ -128,8 +129,8 @@ func TestGitLabDetectorWithDefault(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	require.Len(t, buildEnvStats.DetectedBuildTools, 1)
-	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTools, Maven, "pom.xml")
+	require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
+	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, Maven, "pom.xml")
 	require.Len(t, buildEnvStats.SortedLanguages, 1)
 	assert.Equal(t, "Java", buildEnvStats.SortedLanguages[0])
 }
@@ -145,8 +146,8 @@ func TestGitHubDetectorWithDefault(t *testing.T) {
 	if err != nil {
 		assert.Contains(t, err.Error(), "API rate limit exceeded")
 	} else {
-		require.Len(t, buildEnvStats.DetectedBuildTools, 1)
-		assertContainsBuildTool(t, buildEnvStats.DetectedBuildTools, Maven, "pom.xml")
+		require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
+		assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, Maven, "pom.xml")
 		require.Len(t, buildEnvStats.SortedLanguages, 2)
 		assert.Equal(t, "Java", buildEnvStats.SortedLanguages[0])
 		assert.Equal(t, "Dockerfile", buildEnvStats.SortedLanguages[1])
@@ -162,8 +163,8 @@ func TestGenericGitUsingSshAccessingGitLabWithDefaultCredentials(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	require.Len(t, buildEnvStats.DetectedBuildTools, 1)
-	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTools, Maven, "pom.xml")
+	require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
+	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, Maven, "pom.xml")
 	require.Len(t, buildEnvStats.SortedLanguages, 6)
 	assert.Contains(t, buildEnvStats.SortedLanguages, "Java")
 }
@@ -177,8 +178,8 @@ func TestGenericGitUsingSshAccessingBitbucketWithDefaultCredentials(t *testing.T
 
 	// then
 	require.NoError(t, err)
-	require.Len(t, buildEnvStats.DetectedBuildTools, 1)
-	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTools, Maven, "pom.xml")
+	require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
+	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, Maven, "pom.xml")
 	require.Len(t, buildEnvStats.SortedLanguages, 6)
 	assert.Contains(t, buildEnvStats.SortedLanguages, "Java")
 }
@@ -192,8 +193,8 @@ func TestGenericGitUsingSshAccessingGitHubWithDefaultCredentials(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	require.Len(t, buildEnvStats.DetectedBuildTools, 1)
-	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTools, Maven, "pom.xml")
+	require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
+	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, Maven, "pom.xml")
 	require.Len(t, buildEnvStats.SortedLanguages, 6)
 	assert.Contains(t, buildEnvStats.SortedLanguages, "Java")
 }
@@ -270,9 +271,9 @@ func TestGitLabDetectorWithUsernamePassword(t *testing.T) {
 	printBuildEnvStats(buildEnvStats)
 }
 
-func printBuildEnvStats(buildEnvStats *BuildEnvStats) {
+func printBuildEnvStats(buildEnvStats *v1alpha1.BuildEnvStats) {
 	fmt.Println(buildEnvStats.SortedLanguages)
-	for _, build := range buildEnvStats.DetectedBuildTools {
-		fmt.Println(*build)
+	for _, build := range buildEnvStats.DetectedBuildTypes {
+		fmt.Println(build)
 	}
 }

@@ -106,7 +106,7 @@ test-unit-with-coverage: prebuild-check clean-coverage-unit $(COV_PATH_UNIT)
 test-unit: prebuild-check $(SOURCES)
 	$(call log-info,"Running test: $@")
 	$(eval TEST_PACKAGES:=$(shell go list ./... | grep -v $(ALL_PKGS_EXCLUDE_PATTERN)))
-	ADMIN_LOG_LEVEL=$(ADMIN_LOG_LEVEL) go test -vet off $(GO_TEST_VERBOSITY_FLAG) $(TEST_PACKAGES)
+	ADMIN_LOG_LEVEL=$(ADMIN_LOG_LEVEL) go test -vet off -p 1 $(GO_TEST_VERBOSITY_FLAG) $(TEST_PACKAGES)
 
 .PHONY: test-e2e
 ## Runs the e2e tests without coverage
@@ -244,7 +244,7 @@ $(eval ALL_PKGS_COMMA_SEPARATED := $(6))
 @mkdir -p $(COV_DIR)/$(PACKAGE_NAME);
 $(eval COV_OUT_FILE := $(COV_DIR)/$(PACKAGE_NAME)/coverage.$(TEST_NAME).mode-$(COVERAGE_MODE))
 @$(ENV_VAR) ADMIN_LOG_LEVEL=$(ADMIN_LOG_LEVEL) \
-	go test -vet off $(PACKAGE_NAME) \
+	go test -vet off -p 1 $(PACKAGE_NAME) \
 		$(GO_TEST_VERBOSITY_FLAG) \
 		-coverprofile $(COV_OUT_FILE) \
 		-coverpkg $(ALL_PKGS_COMMA_SEPARATED) \

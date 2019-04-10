@@ -582,14 +582,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8466f8f02821d01876c2955c59174503418869aac1fc6533cf20bddcd8dffbe4"
+  digest = "1:95d695afd835a6f3a2aa52e5cecf2307df2c86d23802a1557172a3b987688012"
   name = "github.com/redhat-developer/devconsole-api"
   packages = [
     "pkg/apis",
     "pkg/apis/devconsole/v1alpha1",
   ]
   pruneopts = "NT"
-  revision = "337a67c0dc928d5a01a9f48d989d5ac74ef26e92"
+  revision = "a67d77335e36554ccf3fea971af2d0ff10af3161"
 
 [[projects]]
   digest = "1:fcef1ce61da6f8f6f115154fb0e0e5b159fe11656839ba1e6061372711c013ee"
