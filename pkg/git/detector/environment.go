@@ -1,17 +1,9 @@
 package detector
 
-import "regexp"
-
-type BuildEnvStats struct {
-	SortedLanguages    []string
-	DetectedBuildTools []*DetectedBuildTool
-}
-
-type DetectedBuildTool struct {
-	language      string
-	name          string
-	detectedFiles []string
-}
+import (
+	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
+	"regexp"
+)
 
 type BuildTool struct {
 	Language      string
@@ -19,11 +11,11 @@ type BuildTool struct {
 	ExpectedFiles []*regexp.Regexp
 }
 
-func NewDetectedBuildTool(language string, name string, detectedFiles []string) *DetectedBuildTool {
-	return &DetectedBuildTool{
-		language:      language,
-		name:          name,
-		detectedFiles: detectedFiles,
+func NewDetectedBuildTool(language string, name string, detectedFiles []string) *v1alpha1.DetectedBuildType {
+	return &v1alpha1.DetectedBuildType{
+		Language:      language,
+		Name:          name,
+		DetectedFiles: detectedFiles,
 	}
 }
 

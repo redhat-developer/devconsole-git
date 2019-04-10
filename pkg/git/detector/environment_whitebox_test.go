@@ -2,6 +2,7 @@ package detector
 
 import (
 	"fmt"
+	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
 	"github.com/redhat-developer/git-service/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -54,7 +55,7 @@ func TestDetectJavaMavenAndGradle(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, buildEnvStats)
 
-	buildTools := buildEnvStats.DetectedBuildTools
+	buildTools := buildEnvStats.DetectedBuildTypes
 	require.Len(t, buildTools, 2)
 
 	assertContainsBuildTool(t, buildTools, Gradle, "gradlew")
@@ -76,7 +77,7 @@ func TestDetectJavaMavenAndGo(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, buildEnvStats)
 
-	buildTools := buildEnvStats.DetectedBuildTools
+	buildTools := buildEnvStats.DetectedBuildTypes
 	require.Len(t, buildTools, 2)
 
 	assertContainsBuildTool(t, buildTools, Golang, "main.go")
@@ -99,7 +100,7 @@ func TestDetectRuby(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, buildEnvStats)
 
-	buildTools := buildEnvStats.DetectedBuildTools
+	buildTools := buildEnvStats.DetectedBuildTypes
 	require.Len(t, buildTools, 1)
 
 	assertContainsBuildTool(t, buildTools, Ruby, "Gemfile")
@@ -120,7 +121,7 @@ func TestDetectPHP(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, buildEnvStats)
 
-	buildTools := buildEnvStats.DetectedBuildTools
+	buildTools := buildEnvStats.DetectedBuildTypes
 	require.Len(t, buildTools, 1)
 
 	assertContainsBuildTool(t, buildTools, PHP, "index.php")
@@ -141,7 +142,7 @@ func TestDetectNodeJS(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, buildEnvStats)
 
-	buildTools := buildEnvStats.DetectedBuildTools
+	buildTools := buildEnvStats.DetectedBuildTypes
 	require.Len(t, buildTools, 1)
 
 	assertContainsBuildTool(t, buildTools, NodeJS, "package.json", "gulpfile.js")
@@ -162,7 +163,7 @@ func TestDetectPython(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, buildEnvStats)
 
-	buildTools := buildEnvStats.DetectedBuildTools
+	buildTools := buildEnvStats.DetectedBuildTypes
 	require.Len(t, buildTools, 1)
 
 	assertContainsBuildTool(t, buildTools, Python, "requirements.txt")
@@ -183,7 +184,7 @@ func TestDetectPerl(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, buildEnvStats)
 
-	buildTools := buildEnvStats.DetectedBuildTools
+	buildTools := buildEnvStats.DetectedBuildTypes
 	require.Len(t, buildTools, 1)
 
 	assertContainsBuildTool(t, buildTools, Perl, "index.pl")
@@ -204,7 +205,7 @@ func TestDetectDotnet(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, buildEnvStats)
 
-	buildTools := buildEnvStats.DetectedBuildTools
+	buildTools := buildEnvStats.DetectedBuildTypes
 	require.Len(t, buildTools, 1)
 
 	assertContainsBuildTool(t, buildTools, Dotnet, "project.json", "some.csproj")
@@ -214,14 +215,14 @@ func TestDetectDotnet(t *testing.T) {
 	assert.Equal(t, "C#", langs[0])
 }
 
-func assertContainsBuildTool(t *testing.T, detected []*DetectedBuildTool, expectedBuildTool BuildTool, files ...string) {
+func assertContainsBuildTool(t *testing.T, detected []v1alpha1.DetectedBuildType, expectedBuildTool BuildTool, files ...string) {
 	var found bool
 	for _, tool := range detected {
-		if tool.name == expectedBuildTool.Name {
-			assert.Equal(t, expectedBuildTool.Language, tool.language)
-			assert.Len(t, tool.detectedFiles, len(files))
+		if tool.Name == expectedBuildTool.Name {
+			assert.Equal(t, expectedBuildTool.Language, tool.Language)
+			assert.Len(t, tool.DetectedFiles, len(files))
 			for _, file := range files {
-				assert.Contains(t, tool.detectedFiles, file)
+				assert.Contains(t, tool.DetectedFiles, file)
 			}
 			found = true
 			break
