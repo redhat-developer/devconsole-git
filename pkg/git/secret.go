@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
+	"k8s.io/apimachinery/pkg/types"
 	"net"
 	"net/http"
 	"strings"
@@ -12,6 +14,9 @@ import (
 	"golang.org/x/oauth2"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	gitssh "gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
+
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type SecretProvider struct {
@@ -179,4 +184,30 @@ func ParseUsernameAndPassword(secret string) (string, string) {
 		return split[0], split[1]
 	}
 	return "", ""
+}
+
+func GetGitSecret(client client.Client, namespace string, gitSource *v1alpha1.GitSource) (Secret, error) {
+	if gitSource.Spec.SecretRef == nil {
+		return nil, nil
+	}
+	secret := &corev1.Secret{}
+	namespacedSecretName := types.NamespacedName{Namespace: namespace, Name: gitSource.Spec.SecretRef.Name}
+	err := client.Get(context.TODO(), namespacedSecretName, secret)
+	if err != nil {
+		return nil, err
+	}
+
+	username := string(secret.Data[corev1.BasicAuthUsernameKey])
+	password := string(secret.Data[corev1.BasicAuthPasswordKey])
+	sshKey := string(secret.Data[corev1.SSHAuthPrivateKey])
+	if username != "" {
+		return NewUsernamePassword(username, password), nil
+	} else if password != "" {
+		return NewOauthToken([]byte(password)), nil
+	} else if sshKey != "" {
+		return NewSshKey([]byte(sshKey), secret.Data["passphrase"]), nil
+	}
+
+	return nil, fmt.Errorf("the provided secret does not contain any of the required parameters: [%s,%s,%s] or they are empty",
+		corev1.BasicAuthUsernameKey, corev1.BasicAuthPasswordKey, corev1.SSHAuthPrivateKey)
 }

@@ -3,8 +3,10 @@ package gitsourceanalysis
 import (
 	"context"
 	"github.com/go-logr/logr"
-	"github.com/redhat-developer/git-service/pkg/controller/common"
+	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/detector"
+	"github.com/redhat-developer/git-service/pkg/log"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -19,7 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var log = logf.Log.WithName("controller_gitsourceanalysis")
+var controllerLogger = logf.Log.WithName("controller_gitsourceanalysis")
 
 // Add creates a new GitSourceAnalysis Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -65,7 +67,7 @@ type ReconcileGitSourceAnalysis struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileGitSourceAnalysis) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger := controllerLogger.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling GitSourceAnalysis")
 
 	// Fetch the GitSourceAnalysis instance
@@ -92,16 +94,16 @@ func (r *ReconcileGitSourceAnalysis) Reconcile(request reconcile.Request) (recon
 	return analyze(reqLogger, r.client, gsAnalysis, request.Namespace)
 }
 
-func analyze(log logr.Logger, client client.Client, gsAnalysis *v1alpha1.GitSourceAnalysis, namespace string) (reconcile.Result, error) {
+func analyze(logger logr.Logger, client client.Client, gsAnalysis *v1alpha1.GitSourceAnalysis, namespace string) (reconcile.Result, error) {
 	gitSource := &v1alpha1.GitSource{}
-	err := client.Get(context.TODO(), common.NewNsdName(namespace, gsAnalysis.Spec.GitSourceRef.Name), gitSource)
+	err := client.Get(context.TODO(), newNsdName(namespace, gsAnalysis.Spec.GitSourceRef.Name), gitSource)
 	if err != nil {
 		gsAnalysis.Status.Error = err.Error()
-		log.WithValues("git-source", gsAnalysis.Spec.GitSourceRef).
+		logger.WithValues("git-source", gsAnalysis.Spec.GitSourceRef).
 			Error(err, "There was an error while reading the GitSource object")
 
 	} else {
-		buildEnvStats, err := analyzeGitSource(log, client, gitSource, namespace)
+		buildEnvStats, err := analyzeGitSource(logger, client, gitSource, namespace)
 		if err != nil {
 			gsAnalysis.Status.Error = err.Error()
 		} else {
@@ -112,7 +114,7 @@ func analyze(log logr.Logger, client client.Client, gsAnalysis *v1alpha1.GitSour
 	gsAnalysis.Status.Analyzed = true
 	err = client.Update(context.TODO(), gsAnalysis)
 	if err != nil {
-		common.LogWithGSValues(log, gitSource).Error(err, "Error updating GitSourceAnalysis object")
+		log.LogWithGSValues(logger, gitSource).Error(err, "Error updating GitSourceAnalysis object")
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
@@ -126,13 +128,13 @@ func analyze(log logr.Logger, client client.Client, gsAnalysis *v1alpha1.GitSour
 	return reconcile.Result{}, nil
 }
 
-func analyzeGitSource(log logr.Logger, client client.Client, gitSource *v1alpha1.GitSource, namespace string) (*v1alpha1.BuildEnvStats, error) {
-	common.LogWithGSValues(log, gitSource).Info("Analyzing GitSource")
+func analyzeGitSource(logger logr.Logger, client client.Client, gitSource *v1alpha1.GitSource, namespace string) (*v1alpha1.BuildEnvStats, error) {
+	log.LogWithGSValues(logger, gitSource).Info("Analyzing GitSource")
 
 	// Fetch the GitSource secret
-	gitSecret, err := common.GetGitSecret(client, namespace, gitSource)
+	gitSecret, err := git.GetGitSecret(client, namespace, gitSource)
 	if err != nil {
-		common.LogWithGSValues(log, gitSource, "secret", gitSource.Spec.SecretRef.Name).
+		log.LogWithGSValues(logger, gitSource, "secret", gitSource.Spec.SecretRef.Name).
 			Error(err, "Error reading the secret object")
 		return nil, err
 
@@ -145,8 +147,12 @@ func analyzeGitSource(log logr.Logger, client client.Client, gitSource *v1alpha1
 			buildEnvStats, err = detector.DetectBuildEnvironments(gitSource)
 		}
 		if err != nil {
-			common.LogWithGSValues(log, gitSource).Error(err, "Error detecting build types")
+			log.LogWithGSValues(logger, gitSource).Error(err, "Error detecting build types")
 		}
 		return buildEnvStats, err
 	}
+}
+
+func newNsdName(namespace, name string) types.NamespacedName {
+	return types.NamespacedName{Namespace: namespace, Name: name}
 }

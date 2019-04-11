@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
-	"github.com/redhat-developer/git-service/pkg/controller/common"
 	"github.com/redhat-developer/git-service/pkg/git/detector"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
 	"github.com/redhat-developer/git-service/pkg/test"
@@ -197,7 +196,7 @@ func TestReconcileGitSourceAnalysisFromLocalRepoWithSshKeyWithPassphrase(t *test
 
 func assertGitSourceAnalysis(t *testing.T, client client.Client, errorMsg string, langs test.SliceOfStrings, buildTypes ...typeWithFiles) {
 	gitSourceAnalysis := &v1alpha1.GitSourceAnalysis{}
-	err := client.Get(context.TODO(), common.NewNsdName(test.Namespace, test.GitSourceAnalysisName), gitSourceAnalysis)
+	err := client.Get(context.TODO(), newNsdName(test.Namespace, test.GitSourceAnalysisName), gitSourceAnalysis)
 	require.NoError(t, err)
 
 	if errorMsg != "" {
