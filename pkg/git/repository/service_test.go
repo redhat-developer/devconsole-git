@@ -24,8 +24,8 @@ func TestNewServiceReturnsCorrectService(t *testing.T) {
 	// then
 	require.NoError(t, err)
 	require.NotNil(t, service)
-	files, _ := service.GetListOfFilesInRootDir()
-	assert.Equal(t, "bitbucket", files[0])
+	checker, _ := service.FileExistenceChecker()
+	assert.Equal(t, "bitbucket", checker.GetListOfFoundFiles()[0])
 }
 
 func TestNewServiceReturnsNilService(t *testing.T) {

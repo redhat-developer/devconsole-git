@@ -72,10 +72,14 @@ func getBaseURL(endpoint *gittransport.Endpoint) string {
 	return baseURL
 }
 
-func (s *RepositoryService) GetListOfFilesInRootDir() ([]string, error) {
+func (s *RepositoryService) FileExistenceChecker() (repository.FileExistenceChecker, error) {
 	apiURL := fmt.Sprintf(`%s2.0/repositories/%s/%s/src/%s/?q=type="commit_file"`,
 		s.baseURL, s.repo.Owner, s.repo.Name, s.repo.Branch)
-	return s.doPaginatedCalls(apiURL)
+	files, err := s.doPaginatedCalls(apiURL)
+	if err != nil {
+		return nil, err
+	}
+	return repository.NewCheckerWithFetchedFiles(files), nil
 }
 
 func (s *RepositoryService) doPaginatedCalls(apiURL string) ([]string, error) {

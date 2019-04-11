@@ -3,10 +3,10 @@ package detector
 import (
 	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 	"github.com/redhat-developer/git-service/pkg/git"
+	"github.com/redhat-developer/git-service/pkg/git/detector/build"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
 	"github.com/redhat-developer/git-service/pkg/git/repository/bitbucket"
 	"github.com/redhat-developer/git-service/pkg/git/repository/gitlab"
-	"regexp"
 	"sync"
 
 	"github.com/redhat-developer/git-service/pkg/git/repository/generic"
@@ -48,7 +48,7 @@ func detectBuildEnvs(gitSource *v1alpha1.GitSource, secretProvider *git.SecretPr
 func detectBuildEnvsUsingService(service repository.GitService) (*v1alpha1.BuildEnvStats, error) {
 	var wg sync.WaitGroup
 	wg.Add(1)
-	detectedBuildTools := make(chan *v1alpha1.DetectedBuildType, len(BuildTools))
+	detectedBuildTools := make(chan *v1alpha1.DetectedBuildType, len(build.Tools))
 	var detectionErr error
 	go func() {
 		defer wg.Done()
@@ -79,19 +79,19 @@ func detectBuildEnvsUsingService(service repository.GitService) (*v1alpha1.Build
 
 func detectBuildTools(service repository.GitService, detectedBuildTools chan *v1alpha1.DetectedBuildType) error {
 	var wg sync.WaitGroup
-	wg.Add(len(BuildTools))
+	wg.Add(len(build.Tools))
 
-	files, err := service.GetListOfFilesInRootDir()
+	fileExistenceChecker, err := service.FileExistenceChecker()
 	if err != nil {
 		return err
 	}
 
-	for _, tool := range BuildTools {
-		go func(buildTool BuildTool) {
+	for _, tool := range build.Tools {
+		go func(buildTool build.Tool) {
 			defer wg.Done()
-			detectedFiles := detectBuildToolFiles(buildTool, files)
+			detectedFiles := fileExistenceChecker.DetectFiles(buildTool)
 			if len(detectedFiles) > 0 {
-				detectedBuildTools <- NewDetectedBuildTool(buildTool.Language, buildTool.Name, detectedFiles)
+				detectedBuildTools <- build.NewDetectedBuildTool(buildTool.Language, buildTool.Name, detectedFiles)
 			}
 		}(tool)
 	}
@@ -99,39 +99,4 @@ func detectBuildTools(service repository.GitService, detectedBuildTools chan *v1
 	wg.Wait()
 	close(detectedBuildTools)
 	return nil
-}
-
-func detectBuildToolFiles(buildTool BuildTool, filenames []string) []string {
-	detectedFiles := make(chan string, len(buildTool.ExpectedFiles))
-	var wg sync.WaitGroup
-	wg.Add(len(buildTool.ExpectedFiles))
-
-	for _, file := range buildTool.ExpectedFiles {
-		go func(buildToolFile *regexp.Regexp) {
-			defer wg.Done()
-			if detectedFile := getFileIfExists(buildToolFile, filenames); detectedFile != "" {
-				detectedFiles <- detectedFile
-			}
-		}(file)
-	}
-
-	wg.Wait()
-	close(detectedFiles)
-	var result []string
-	for detectedFile := range detectedFiles {
-		if detectedFile != "" {
-			result = append(result, detectedFile)
-		}
-	}
-
-	return result
-}
-
-func getFileIfExists(buildToolFile *regexp.Regexp, actualFiles []string) string {
-	for _, file := range actualFiles {
-		if buildToolFile.MatchString(file) {
-			return file
-		}
-	}
-	return ""
 }

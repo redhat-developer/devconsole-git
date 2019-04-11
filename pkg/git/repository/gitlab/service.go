@@ -68,7 +68,7 @@ func getBaseUrl(endpoint *gittransport.Endpoint) string {
 	return endpoint.String()[:len(endpoint.String())-len(endpoint.Path)]
 }
 
-func (s *RepositoryService) GetListOfFilesInRootDir() ([]string, error) {
+func (s *RepositoryService) FileExistenceChecker() (repository.FileExistenceChecker, error) {
 	tree, _, err := s.client.Repositories.ListTree(
 		s.repo.OwnerWithName(),
 		&gogl.ListTreeOptions{
@@ -81,7 +81,7 @@ func (s *RepositoryService) GetListOfFilesInRootDir() ([]string, error) {
 	for _, entry := range tree {
 		filenames = append(filenames, entry.Path)
 	}
-	return filenames, nil
+	return repository.NewCheckerWithFetchedFiles(filenames), nil
 }
 
 func (s *RepositoryService) GetLanguageList() ([]string, error) {

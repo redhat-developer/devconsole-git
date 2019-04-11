@@ -2,16 +2,19 @@ package github
 
 import (
 	"context"
+	"fmt"
 	gogh "github.com/google/go-github/github"
 	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
 	gittransport "gopkg.in/src-d/go-git.v4/plumbing/transport"
+	"strings"
 )
 
 const (
-	githubHost   = "github.com"
-	githubFlavor = "github"
+	githubHost           = "github.com"
+	githubFlavor         = "github"
+	apiRateLimitErrorMsg = "API rate limit exceeded for"
 )
 
 type RepositoryService struct {
@@ -19,6 +22,7 @@ type RepositoryService struct {
 	client    *gogh.Client
 	repo      repository.StructuredIdentifier
 	filenames []string
+	secret    git.Secret
 }
 
 // NewRepoServiceIfMatches returns function creating Github repository service if either host of the git repo URL is github.com
@@ -56,10 +60,11 @@ func newGhService(gitSource *v1alpha1.GitSource, endpoint *gittransport.Endpoint
 		gitSource: gitSource,
 		client:    client,
 		repo:      repo,
+		secret:    secret,
 	}, nil
 }
 
-func (s *RepositoryService) GetListOfFilesInRootDir() ([]string, error) {
+func (s *RepositoryService) FileExistenceChecker() (repository.FileExistenceChecker, error) {
 	tree, _, err := s.client.Git.GetTree(
 		context.Background(),
 		s.repo.Owner,
@@ -67,13 +72,17 @@ func (s *RepositoryService) GetListOfFilesInRootDir() ([]string, error) {
 		s.repo.Branch,
 		false)
 	if err != nil {
+		if strings.Contains(err.Error(), apiRateLimitErrorMsg) {
+			baseURL := fmt.Sprintf("https://github.com/%s/%s/blob/%s/", s.repo.Owner, s.repo.Name, s.repo.Branch)
+			return repository.NewCheckerUsingHeaderRequests(baseURL, s.secret), nil
+		}
 		return nil, err
 	}
 	var filenames []string
 	for _, entry := range tree.Entries {
 		filenames = append(filenames, *entry.Path)
 	}
-	return filenames, nil
+	return repository.NewCheckerWithFetchedFiles(filenames), nil
 }
 
 func (s *RepositoryService) GetLanguageList() ([]string, error) {
@@ -83,6 +92,9 @@ func (s *RepositoryService) GetLanguageList() ([]string, error) {
 		s.repo.Name)
 
 	if err != nil {
+		if strings.Contains(err.Error(), apiRateLimitErrorMsg) {
+			return []string{}, nil
+		}
 		return nil, err
 	}
 

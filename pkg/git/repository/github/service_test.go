@@ -6,6 +6,7 @@ import (
 	"fmt"
 	gogh "github.com/google/go-github/github"
 	"github.com/redhat-developer/git-service/pkg/git"
+	"github.com/redhat-developer/git-service/pkg/git/detector/build"
 	"github.com/redhat-developer/git-service/pkg/git/repository/github"
 	"github.com/redhat-developer/git-service/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -50,8 +51,9 @@ func TestRepositoryServiceForAllValidAuthMethodsSuccessful(t *testing.T) {
 		// then
 		require.NoError(t, err)
 
-		filesInRootDir, err := service.GetListOfFilesInRootDir()
+		checker, err := service.FileExistenceChecker()
 		require.NoError(t, err)
+		filesInRootDir := checker.GetListOfFoundFiles()
 		require.Len(t, filesInRootDir, 2)
 		assert.Contains(t, filesInRootDir, "pom.xml")
 		assert.Contains(t, filesInRootDir, "mvnw")
@@ -134,10 +136,10 @@ func TestRepositoryServiceForWrongRepo(t *testing.T) {
 		// then
 		require.NoError(t, err)
 
-		filesInRootDir, err := service.GetListOfFilesInRootDir()
+		checker, err := service.FileExistenceChecker()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "Not Found")
-		require.Len(t, filesInRootDir, 0)
+		assert.Nil(t, checker)
 
 		languageList, err := service.GetLanguageList()
 		require.Error(t, err)
@@ -156,7 +158,10 @@ func TestRepositoryServiceReturningRateLimit(t *testing.T) {
 			Times(2).
 			Reply(403).
 			BodyString(apiRateLimit)
-		source := test.NewGitSource(test.WithURL(repoURL))
+		gock.New("https://github.com").
+			Head(fmt.Sprintf("/%s/blob/%s/pom.xml", repoIdentifier, "dev")).
+			Reply(200)
+		source := test.NewGitSource(test.WithURL(repoURL), test.WithRef("dev"))
 
 		// when
 		service, err := github.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
@@ -164,14 +169,21 @@ func TestRepositoryServiceReturningRateLimit(t *testing.T) {
 		// then
 		require.NoError(t, err)
 
-		filesInRootDir, err := service.GetListOfFilesInRootDir()
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "API rate limit exceeded")
-		require.Len(t, filesInRootDir, 0)
+		checker, err := service.FileExistenceChecker()
+		require.NoError(t, err)
+		filesInRootDir := checker.GetListOfFoundFiles()
+		assert.Len(t, filesInRootDir, 0)
+
+		// and when
+		var files []string
+		for _, tool := range build.Tools {
+			files = append(files, checker.DetectFiles(tool)...)
+		}
+		assert.Len(t, files, 1)
+		assert.Contains(t, files, "pom.xml")
 
 		languageList, err := service.GetLanguageList()
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "API rate limit exceeded")
+		require.NoError(t, err)
 		require.Len(t, languageList, 0)
 	}
 }

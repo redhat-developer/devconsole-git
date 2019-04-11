@@ -97,19 +97,22 @@ func (l *treeLoader) fetchTree(repository *gogit.Repository, authMethod transpor
 	return tree, nil
 }
 
-func (s *RepositoryService) GetListOfFilesInRootDir() ([]string, error) {
+func (s *RepositoryService) FileExistenceChecker() (repository.FileExistenceChecker, error) {
 	tree, err := s.treeLoader.fetchTree(s.repository, s.authMethod)
 	if err != nil {
 		return nil, err
 	}
 	var filenames []string
-	tree.Files().ForEach(func(f *object.File) error {
+	err = tree.Files().ForEach(func(f *object.File) error {
 		if !strings.Contains(f.Name, "/") {
 			filenames = append(filenames, f.Name)
 		}
 		return nil
 	})
-	return filenames, nil
+	if err != nil {
+		return nil, err
+	}
+	return repository.NewCheckerWithFetchedFiles(filenames), nil
 }
 
 func (s *RepositoryService) GetLanguageList() ([]string, error) {

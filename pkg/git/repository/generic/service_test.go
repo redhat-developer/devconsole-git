@@ -28,8 +28,9 @@ func TestNewRepositoryServiceForAllSecretsAndMethods(t *testing.T) {
 
 		// then
 		require.NoError(t, err)
-		rootFiles, err := service.GetListOfFilesInRootDir()
+		checker, err := service.FileExistenceChecker()
 		require.NoError(t, err)
+		rootFiles := checker.GetListOfFoundFiles()
 		require.Len(t, rootFiles, 2)
 		assert.Contains(t, rootFiles, "pom.xml")
 		assert.Contains(t, rootFiles, "mvnw")
@@ -57,8 +58,9 @@ func TestNewRepositoryServiceShouldReturnFilesAddedByMultipleCommits(t *testing.
 
 	// then
 	require.NoError(t, err)
-	rootFiles, err := service.GetListOfFilesInRootDir()
+	checker, err := service.FileExistenceChecker()
 	require.NoError(t, err)
+	rootFiles := checker.GetListOfFoundFiles()
 	require.Len(t, rootFiles, 3)
 	assert.Contains(t, rootFiles, "pom.xml")
 	assert.Contains(t, rootFiles, "mvnw")
@@ -77,8 +79,9 @@ func TestNewRepositoryServiceWithEmptyMasterBranch(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	rootFiles, err := service.GetListOfFilesInRootDir()
+	checker, err := service.FileExistenceChecker()
 	require.NoError(t, err)
+	rootFiles := checker.GetListOfFoundFiles()
 	require.Len(t, rootFiles, 0)
 
 	languageList, err := service.GetLanguageList()
@@ -98,8 +101,9 @@ func TestNewRepositoryServiceWithOtherThanMasterBranch(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	rootFiles, err := service.GetListOfFilesInRootDir()
+	checker, err := service.FileExistenceChecker()
 	require.NoError(t, err)
+	rootFiles := checker.GetListOfFoundFiles()
 	require.Len(t, rootFiles, 2)
 	assert.Contains(t, rootFiles, "main.go")
 	assert.Contains(t, rootFiles, "any-file")
@@ -121,18 +125,21 @@ func TestNewRepositoryServiceShouldLoadFilesOnlyOnce(t *testing.T) {
 	require.NoError(t, err)
 
 	// when
-	rootFiles, err := service.GetListOfFilesInRootDir()
+	checker, err := service.FileExistenceChecker()
 
 	// then
 	require.NoError(t, err)
+	rootFiles := checker.GetListOfFoundFiles()
 	require.Len(t, rootFiles, 1)
 	assert.Contains(t, rootFiles, "main.go")
 
 	// and when
 	dummyRepo.Commit("pom.xml")
-	rootFiles, err = service.GetListOfFilesInRootDir()
+	checker, err = service.FileExistenceChecker()
 
 	// then it should use cache
+	require.NoError(t, err)
+	rootFiles = checker.GetListOfFoundFiles()
 	require.Len(t, rootFiles, 1)
 	assert.Contains(t, rootFiles, "main.go")
 	languageList, err := service.GetLanguageList()
@@ -156,9 +163,11 @@ func TestNewRepositoryServiceUsingSSh(t *testing.T) {
 	require.NoError(t, err)
 
 	// when
-	rootFiles, err := service.GetListOfFilesInRootDir()
+	checker, err := service.FileExistenceChecker()
 
 	// then
+	require.NoError(t, err)
+	rootFiles := checker.GetListOfFoundFiles()
 	require.NoError(t, err)
 	require.Len(t, rootFiles, 1)
 	assert.Contains(t, rootFiles, "main.go")
@@ -183,7 +192,7 @@ func TestNewRepositoryServiceUsingSShWithWrongKey(t *testing.T) {
 	require.NoError(t, err)
 
 	// when
-	_, err = service.GetListOfFilesInRootDir()
+	_, err = service.FileExistenceChecker()
 
 	// then
 	assert.Contains(t, err.Error(), "ssh: handshake failed: ssh: unable to authenticate")
@@ -211,9 +220,11 @@ func TestNewRepositoryServiceUsingBasicSShAuth(t *testing.T) {
 		require.NoError(t, err)
 
 		// when
-		rootFiles, err := service.GetListOfFilesInRootDir()
+		checker, err := service.FileExistenceChecker()
 
 		// then
+		require.NoError(t, err)
+		rootFiles := checker.GetListOfFoundFiles()
 		require.NoError(t, err)
 		require.Len(t, rootFiles, 1)
 		assert.Contains(t, rootFiles, "main.go")
@@ -240,7 +251,7 @@ func TestNewRepositoryServiceUsingBasicSShAuthWithWrongPassword(t *testing.T) {
 		require.NoError(t, err)
 
 		// when
-		_, err = service.GetListOfFilesInRootDir()
+		_, err = service.FileExistenceChecker()
 
 		// then
 		assert.Contains(t, err.Error(), "ssh: handshake failed: ssh: unable to authenticate")

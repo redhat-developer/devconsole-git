@@ -48,8 +48,9 @@ func TestRepositoryServiceForAllValidAuthMethodsSuccessful(t *testing.T) {
 		// then
 		require.NoError(t, err)
 
-		filesInRootDir, err := service.GetListOfFilesInRootDir()
+		checker, err := service.FileExistenceChecker()
 		require.NoError(t, err)
+		filesInRootDir := checker.GetListOfFoundFiles()
 		require.Len(t, filesInRootDir, 2)
 		assert.Contains(t, filesInRootDir, "pom.xml")
 		assert.Contains(t, filesInRootDir, "mvnw")
@@ -133,10 +134,10 @@ func TestRepositoryServiceForWrongRepo(t *testing.T) {
 		// then
 		require.NoError(t, err)
 
-		filesInRootDir, err := service.GetListOfFilesInRootDir()
+		checker, err := service.FileExistenceChecker()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "Not Found")
-		require.Len(t, filesInRootDir, 0)
+		require.Nil(t, checker)
 
 		languageList, err := service.GetLanguageList()
 		require.Error(t, err)
@@ -163,8 +164,9 @@ func TestRepositoryServiceForPrivateInstance(t *testing.T) {
 		// then
 		require.NoError(t, err)
 
-		filesInRootDir, err := service.GetListOfFilesInRootDir()
+		checker, err := service.FileExistenceChecker()
 		require.NoError(t, err)
+		filesInRootDir := checker.GetListOfFoundFiles()
 		require.Len(t, filesInRootDir, 2)
 		assert.Contains(t, filesInRootDir, "pom.xml")
 		assert.Contains(t, filesInRootDir, "mvnw")

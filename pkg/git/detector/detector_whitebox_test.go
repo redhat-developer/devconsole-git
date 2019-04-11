@@ -3,6 +3,7 @@ package detector
 import (
 	"fmt"
 	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
+	"github.com/redhat-developer/git-service/pkg/git/detector/build"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
 	"github.com/redhat-developer/git-service/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -19,9 +20,9 @@ var (
 	nilSlice = func() []string {
 		return nil
 	}
-	failingService          = test.NewDummyService("failing", true, test.S("failing"), test.S())
-	failingFilesService     = test.NewDummyService("failing-files", false, nilSlice, test.S("Java"))
-	failingLanguagesService = test.NewDummyService("failing-languages", false, test.S("any"), nilSlice)
+	failingService          = test.NewDummyService("failing", true, test.S("failing"), test.S(), true)
+	failingFilesService     = test.NewDummyService("failing-files", false, nilSlice, test.S("Java"), true)
+	failingLanguagesService = test.NewDummyService("failing-languages", false, test.S("any"), nilSlice, true)
 )
 
 const pathToTestDir = "../../test"
@@ -37,7 +38,7 @@ func TestDetectBuildEnvsShouldUseGenericGitIfNotOtherMatches(t *testing.T) {
 	source := test.NewGitSource(test.WithURL(dummyRepo.Path), test.WithFlavor("not-existing"))
 
 	// when
-	buildEnvStats, err := detectBuildEnvs(source, git.NewSecretProvider(sshKey), allCreators)
+	buildEnvStats, err := detectBuildEnvs(source, git.NewSecretProvider(sshKey), allEnvServiceCreators(true))
 
 	// then
 	require.NoError(t, err)
@@ -46,8 +47,8 @@ func TestDetectBuildEnvsShouldUseGenericGitIfNotOtherMatches(t *testing.T) {
 	buildTools := buildEnvStats.DetectedBuildTypes
 	require.Len(t, buildTools, 2)
 
-	assertContainsBuildTool(t, buildTools, Maven, "pom.xml")
-	assertContainsBuildTool(t, buildTools, NodeJS, "package.json")
+	assertContainsBuildTool(t, buildTools, build.Maven, "pom.xml")
+	assertContainsBuildTool(t, buildTools, build.NodeJS, "package.json")
 
 	langs := buildEnvStats.SortedLanguages
 	assert.Len(t, langs, 4)
@@ -62,7 +63,7 @@ func TestFailingCreator(t *testing.T) {
 	source := test.NewGitSource(test.WithFlavor(failingService.Flavor))
 
 	// when
-	buildEnvStats, err := detectBuildEnvs(source, nil, append(allCreators, failingService.Creator()))
+	buildEnvStats, err := detectBuildEnvs(source, nil, append(allEnvServiceCreators(true), failingService.Creator()))
 
 	// then
 	require.Error(t, err)
@@ -77,7 +78,7 @@ func TestFailingGenericGitCreation(t *testing.T) {
 	source := test.NewGitSource(test.WithURL(dummyRepo.Path), test.WithFlavor("not-existing"))
 
 	// when
-	buildEnvStats, err := detectBuildEnvs(source, git.NewSecretProvider(sshKey), allCreators)
+	buildEnvStats, err := detectBuildEnvs(source, git.NewSecretProvider(sshKey), allEnvServiceCreators(true))
 
 	// then
 	require.Error(t, err)
@@ -115,7 +116,7 @@ func TestBitbucketDetectorWithDefault(t *testing.T) {
 	// then
 	require.NoError(t, err)
 	require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
-	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, Maven, "pom.xml")
+	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, build.Maven, "pom.xml")
 	require.Len(t, buildEnvStats.SortedLanguages, 1)
 	assert.Equal(t, "java", buildEnvStats.SortedLanguages[0])
 }
@@ -130,7 +131,7 @@ func TestGitLabDetectorWithDefault(t *testing.T) {
 	// then
 	require.NoError(t, err)
 	require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
-	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, Maven, "pom.xml")
+	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, build.Maven, "pom.xml")
 	require.Len(t, buildEnvStats.SortedLanguages, 1)
 	assert.Equal(t, "Java", buildEnvStats.SortedLanguages[0])
 }
@@ -143,15 +144,9 @@ func TestGitHubDetectorWithDefault(t *testing.T) {
 	buildEnvStats, err := DetectBuildEnvironments(glSource)
 
 	// then
-	if err != nil {
-		assert.Contains(t, err.Error(), "API rate limit exceeded")
-	} else {
-		require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
-		assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, Maven, "pom.xml")
-		require.Len(t, buildEnvStats.SortedLanguages, 2)
-		assert.Equal(t, "Java", buildEnvStats.SortedLanguages[0])
-		assert.Equal(t, "Dockerfile", buildEnvStats.SortedLanguages[1])
-	}
+	require.NoError(t, err)
+	require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
+	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, build.Maven, "pom.xml")
 }
 
 func TestGenericGitUsingSshAccessingGitLabWithDefaultCredentials(t *testing.T) {
@@ -164,7 +159,7 @@ func TestGenericGitUsingSshAccessingGitLabWithDefaultCredentials(t *testing.T) {
 	// then
 	require.NoError(t, err)
 	require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
-	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, Maven, "pom.xml")
+	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, build.Maven, "pom.xml")
 	require.Len(t, buildEnvStats.SortedLanguages, 6)
 	assert.Contains(t, buildEnvStats.SortedLanguages, "Java")
 }
@@ -179,7 +174,7 @@ func TestGenericGitUsingSshAccessingBitbucketWithDefaultCredentials(t *testing.T
 	// then
 	require.NoError(t, err)
 	require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
-	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, Maven, "pom.xml")
+	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, build.Maven, "pom.xml")
 	require.Len(t, buildEnvStats.SortedLanguages, 6)
 	assert.Contains(t, buildEnvStats.SortedLanguages, "Java")
 }
@@ -194,7 +189,7 @@ func TestGenericGitUsingSshAccessingGitHubWithDefaultCredentials(t *testing.T) {
 	// then
 	require.NoError(t, err)
 	require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
-	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, Maven, "pom.xml")
+	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, build.Maven, "pom.xml")
 	require.Len(t, buildEnvStats.SortedLanguages, 6)
 	assert.Contains(t, buildEnvStats.SortedLanguages, "Java")
 }
