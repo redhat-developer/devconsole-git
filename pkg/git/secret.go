@@ -194,7 +194,7 @@ func GetGitSecret(client client.Client, namespace string, gitSource *v1alpha1.Gi
 	namespacedSecretName := types.NamespacedName{Namespace: namespace, Name: gitSource.Spec.SecretRef.Name}
 	err := client.Get(context.TODO(), namespacedSecretName, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch the secret object")
 	}
 
 	username := string(secret.Data[corev1.BasicAuthUsernameKey])

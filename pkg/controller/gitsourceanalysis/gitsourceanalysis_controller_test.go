@@ -125,6 +125,25 @@ func TestReconcileGitSourceAnalysisWithDifferentGitSourceName(t *testing.T) {
 	assertGitSourceAnalysis(t, client, "Failed to fetch the input source", nil)
 }
 
+func TestReconcileGitSourceAnalysisWithDifferentSecretName(t *testing.T) {
+	//given
+	defer gock.OffAll()
+	secret := test.NewSecret(corev1.SecretTypeOpaque, map[string][]byte{"password": []byte("some-token")})
+
+	gs := test.NewGitSource(test.WithURL(repoGitHubURL))
+	gs.Spec.SecretRef = &v1alpha1.SecretRef{Name: "some-other-secret"}
+	gsa := test.NewGitSourceAnalysis(test.GitSourceName)
+	reconciler, request, client := PrepareClient(test.GitSourceAnalysisName,
+		test.RegisterGvkObject(v1alpha1.SchemeGroupVersion, gs, gsa),
+		test.RegisterGvkObject(corev1.SchemeGroupVersion, secret))
+	//when
+	_, err := reconciler.Reconcile(request)
+
+	//then
+	require.NoError(t, err)
+	assertGitSourceAnalysis(t, client, "failed to fetch the secret object", nil)
+}
+
 func TestReconcileGitSourceAnalysisFromGitHubWithGivenToken(t *testing.T) {
 	//given
 	defer gock.OffAll()
