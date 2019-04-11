@@ -98,7 +98,7 @@ func analyze(logger logr.Logger, client client.Client, gsAnalysis *v1alpha1.GitS
 	gitSource := &v1alpha1.GitSource{}
 	err := client.Get(context.TODO(), newNsdName(namespace, gsAnalysis.Spec.GitSourceRef.Name), gitSource)
 	if err != nil {
-		gsAnalysis.Status.Error = err.Error()
+		gsAnalysis.Status.Error = "Failed to fetch the input source"
 		logger.WithValues("git-source", gsAnalysis.Spec.GitSourceRef).
 			Error(err, "There was an error while reading the GitSource object")
 

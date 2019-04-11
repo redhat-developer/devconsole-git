@@ -108,6 +108,23 @@ func TestReconcileGitSourceAnalysisFromGitHubWithWrongSecret(t *testing.T) {
 		"the provided secret does not contain any of the required parameters: [username,password,ssh-privatekey] or they are empty", nil)
 }
 
+func TestReconcileGitSourceAnalysisWithDifferentGitSourceName(t *testing.T) {
+	//given
+	defer gock.OffAll()
+
+	gs := test.NewGitSource(test.WithURL(repoGitHubURL))
+	gsa := test.NewGitSourceAnalysis(test.GitSourceName)
+	gsa.Spec.GitSourceRef.Name = "some-other-git-source"
+	reconciler, request, client := PrepareClient(test.GitSourceAnalysisName,
+		test.RegisterGvkObject(v1alpha1.SchemeGroupVersion, gs, gsa))
+	//when
+	_, err := reconciler.Reconcile(request)
+
+	//then
+	require.NoError(t, err)
+	assertGitSourceAnalysis(t, client, "Failed to fetch the input source", nil)
+}
+
 func TestReconcileGitSourceAnalysisFromGitHubWithGivenToken(t *testing.T) {
 	//given
 	defer gock.OffAll()
