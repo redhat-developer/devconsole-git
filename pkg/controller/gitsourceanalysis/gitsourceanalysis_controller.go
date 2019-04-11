@@ -132,20 +132,14 @@ func analyzeGitSource(logger logr.Logger, client client.Client, gitSource *v1alp
 	log.LogWithGSValues(logger, gitSource).Info("Analyzing GitSource")
 
 	// Fetch the GitSource secret
-	gitSecret, err := git.GetGitSecret(client, namespace, gitSource)
+	gitSecretProvider, err := git.NewGitSecretProvider(client, namespace, gitSource)
 	if err != nil {
 		log.LogWithGSValues(logger, gitSource, "secret", gitSource.Spec.SecretRef.Name).
 			Error(err, "Error reading the secret object")
 		return nil, err
 
 	} else {
-		var buildEnvStats *v1alpha1.BuildEnvStats
-		var err error
-		if gitSecret != nil {
-			buildEnvStats, err = detector.DetectBuildEnvironmentsWithSecret(gitSource, gitSecret)
-		} else {
-			buildEnvStats, err = detector.DetectBuildEnvironments(gitSource)
-		}
+		buildEnvStats, err := detector.DetectBuildEnvironments(gitSource, gitSecretProvider)
 		if err != nil {
 			log.LogWithGSValues(logger, gitSource).Error(err, "Error detecting build types")
 		}

@@ -18,7 +18,9 @@ import (
 	"testing"
 )
 
-var pathToTestDir = "../test"
+const pathToTestDir = "../test"
+
+var defaultToken = git.NewOauthToken([]byte("default"))
 
 func TestNewSshKey(t *testing.T) {
 	// given
@@ -185,11 +187,12 @@ func TestGetGitSecretWithNoCredentials(t *testing.T) {
 	client, _ := test.PrepareClient(test.RegisterGvkObject(v1alpha1.SchemeGroupVersion, gs))
 
 	//when
-	secret, err := git.GetGitSecret(client, test.Namespace, gs)
+	secretProvider, err := git.NewGitSecretProvider(client, test.Namespace, gs)
 
 	//then
 	require.NoError(t, err)
-	assert.Nil(t, secret)
+	assert.Empty(t, secretProvider.SecretType())
+	assert.Equal(t, defaultToken, secretProvider.GetSecret(defaultToken))
 }
 
 func TestGetGitSecretWithBasicCredentials(t *testing.T) {
@@ -206,10 +209,11 @@ func TestGetGitSecretWithBasicCredentials(t *testing.T) {
 			test.RegisterGvkObject(corev1.SchemeGroupVersion, sec))
 
 		//when
-		secret, err := git.GetGitSecret(client, test.Namespace, gs)
+		secretProvider, err := git.NewGitSecretProvider(client, test.Namespace, gs)
 
 		//then
 		require.NoError(t, err)
+		secret := secretProvider.GetSecret(defaultToken)
 		assert.Equal(t, git.UsernamePasswordType, secret.SecretType())
 		assert.Equal(t, "username:password", secret.SecretContent())
 	}
@@ -227,11 +231,11 @@ func TestGetGitSecretWithWrongSecret(t *testing.T) {
 		test.RegisterGvkObject(corev1.SchemeGroupVersion, sec))
 
 	//when
-	secret, err := git.GetGitSecret(client, test.Namespace, gs)
+	secretProvider, err := git.NewGitSecretProvider(client, test.Namespace, gs)
 
 	//then
 	assert.Error(t, err)
-	assert.Nil(t, secret)
+	assert.Nil(t, secretProvider)
 }
 
 func TestGetGitSecretWithGivenToken(t *testing.T) {
@@ -247,10 +251,11 @@ func TestGetGitSecretWithGivenToken(t *testing.T) {
 			test.RegisterGvkObject(corev1.SchemeGroupVersion, sec))
 
 		//when
-		secret, err := git.GetGitSecret(client, test.Namespace, gs)
+		secretProvider, err := git.NewGitSecretProvider(client, test.Namespace, gs)
 
 		//then
 		require.NoError(t, err)
+		secret := secretProvider.GetSecret(defaultToken)
 		assert.Equal(t, git.OauthTokenType, secret.SecretType())
 		assert.Equal(t, "some-token", secret.SecretContent())
 	}
@@ -269,10 +274,11 @@ func TestGetGitSecretWithSshKey(t *testing.T) {
 			test.RegisterGvkObject(corev1.SchemeGroupVersion, sec))
 
 		//when
-		secret, err := git.GetGitSecret(client, test.Namespace, gs)
+		secretProvider, err := git.NewGitSecretProvider(client, test.Namespace, gs)
 
 		//then
 		require.NoError(t, err)
+		secret := secretProvider.GetSecret(defaultToken)
 		assert.Equal(t, git.SshKeyType, secret.SecretType())
 		assert.NotEmpty(t, secret.SecretContent())
 	}

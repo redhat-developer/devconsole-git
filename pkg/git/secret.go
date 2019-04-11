@@ -186,28 +186,30 @@ func ParseUsernameAndPassword(secret string) (string, string) {
 	return "", ""
 }
 
-func GetGitSecret(client client.Client, namespace string, gitSource *v1alpha1.GitSource) (Secret, error) {
+func NewGitSecretProvider(client client.Client, namespace string, gitSource *v1alpha1.GitSource) (*SecretProvider, error) {
 	if gitSource.Spec.SecretRef == nil {
-		return nil, nil
+		return NewSecretProvider(nil), nil
 	}
-	secret := &corev1.Secret{}
+	coreSecret := &corev1.Secret{}
 	namespacedSecretName := types.NamespacedName{Namespace: namespace, Name: gitSource.Spec.SecretRef.Name}
-	err := client.Get(context.TODO(), namespacedSecretName, secret)
+	err := client.Get(context.TODO(), namespacedSecretName, coreSecret)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch the secret object")
 	}
 
-	username := string(secret.Data[corev1.BasicAuthUsernameKey])
-	password := string(secret.Data[corev1.BasicAuthPasswordKey])
-	sshKey := string(secret.Data[corev1.SSHAuthPrivateKey])
+	username := string(coreSecret.Data[corev1.BasicAuthUsernameKey])
+	password := string(coreSecret.Data[corev1.BasicAuthPasswordKey])
+	sshKey := string(coreSecret.Data[corev1.SSHAuthPrivateKey])
+	var secret Secret
 	if username != "" {
-		return NewUsernamePassword(username, password), nil
+		secret = NewUsernamePassword(username, password)
 	} else if password != "" {
-		return NewOauthToken([]byte(password)), nil
+		secret = NewOauthToken([]byte(password))
 	} else if sshKey != "" {
-		return NewSshKey([]byte(sshKey), secret.Data["passphrase"]), nil
+		secret = NewSshKey([]byte(sshKey), coreSecret.Data["passphrase"])
+	} else {
+		return nil, fmt.Errorf("the provided secret does not contain any of the required parameters: [%s,%s,%s] or they are empty",
+			corev1.BasicAuthUsernameKey, corev1.BasicAuthPasswordKey, corev1.SSHAuthPrivateKey)
 	}
-
-	return nil, fmt.Errorf("the provided secret does not contain any of the required parameters: [%s,%s,%s] or they are empty",
-		corev1.BasicAuthUsernameKey, corev1.BasicAuthPasswordKey, corev1.SSHAuthPrivateKey)
+	return NewSecretProvider(secret), nil
 }

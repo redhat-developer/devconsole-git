@@ -22,13 +22,13 @@ var gitServiceCreators = []repository.ServiceCreator{
 // DetectBuildEnvironmentsWithSecret detects build tools and languages using the given secret in the git repository
 // defined by the given v1alpha1.GitSource
 func DetectBuildEnvironmentsWithSecret(gitSource *v1alpha1.GitSource, secret git.Secret) (*v1alpha1.BuildEnvStats, error) {
-	return detectBuildEnvs(gitSource, git.NewSecretProvider(secret), gitServiceCreators)
+	return DetectBuildEnvironments(gitSource, git.NewSecretProvider(secret))
 }
 
-// DetectBuildEnvironments detects build tools and languages using the default secret in the git repository
-// defined by the given v1alpha1.GitSource
-func DetectBuildEnvironments(gitSource *v1alpha1.GitSource) (*v1alpha1.BuildEnvStats, error) {
-	return detectBuildEnvs(gitSource, git.NewSecretProvider(nil), gitServiceCreators)
+// DetectBuildEnvironments detects build tools and languages using the secret provided by the SecretProvider
+// in the git repository defined by the given v1alpha1.GitSource
+func DetectBuildEnvironments(gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (*v1alpha1.BuildEnvStats, error) {
+	return detectBuildEnvs(gitSource, secretProvider, gitServiceCreators)
 }
 
 func detectBuildEnvs(gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider, serviceCreators []repository.ServiceCreator) (*v1alpha1.BuildEnvStats, error) {
