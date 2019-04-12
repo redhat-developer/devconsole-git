@@ -1,10 +1,7 @@
 package github_test
 
 import (
-	"crypto/sha1"
-	"encoding/json"
 	"fmt"
-	gogh "github.com/google/go-github/github"
 	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/detector/build"
 	"github.com/redhat-developer/git-service/pkg/git/repository/github"
@@ -12,8 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/h2non/gock.v1"
-	"math/rand"
-	"strings"
 	"testing"
 )
 
@@ -21,11 +16,7 @@ const (
 	pathToTestDir  = "../../../test"
 	repoIdentifier = "some-org/some-repo"
 	repoURL        = "https://github.com/" + repoIdentifier
-	notFound       = `{
-  "message": "Not Found",
-  "documentation_url": "https://developer.github.com/v3/...."
-}`
-	apiRateLimit = `{
+	apiRateLimit   = `{
   "message": "API rate limit exceeded for 1.2.3.4. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)",
   "documentation_url": "https://developer.github.com/v3/#rate-limiting"
 }`
@@ -42,7 +33,7 @@ func TestRepositoryServiceForAllValidAuthMethodsSuccessful(t *testing.T) {
 	defer gock.OffAll()
 
 	for _, secret := range validSecrets {
-		mockGHCalls(t, repoIdentifier, "master", test.S("pom.xml", "mvnw"), test.S("Java", "Go"))
+		test.MockGHGetApiCalls(t, repoIdentifier, "master", test.S("pom.xml", "mvnw"), test.S("Java", "Go"))
 		source := test.NewGitSource(test.WithURL(repoURL))
 
 		// when
@@ -123,11 +114,7 @@ func TestRepositoryServiceForWrongRepo(t *testing.T) {
 	defer gock.OffAll()
 
 	for _, secret := range validSecrets {
-		gock.New("https://api.github.com").
-			Get(fmt.Sprintf("/repos/%s/.*", repoIdentifier)).
-			Times(2).
-			Reply(404).
-			BodyString(notFound)
+		test.MockNotFoundGitHub(repoIdentifier)
 		source := test.NewGitSource(test.WithURL(repoURL), test.WithRef("dev"))
 
 		// when
@@ -183,9 +170,7 @@ func TestRepositoryServiceUsesHeadCallsWhenAnonymousSecretIsUsed(t *testing.T) {
 	defer gock.OffAll()
 
 	for _, secret := range []git.Secret{git.NewUsernamePassword("anonymous", ""), nil} {
-		gock.New("https://github.com").
-			Head(fmt.Sprintf("/%s/blob/%s/pom.xml", repoIdentifier, "dev")).
-			Reply(200)
+		test.MockGHHeadCalls(repoIdentifier, "dev", test.S("pom.xml"))
 		source := test.NewGitSource(test.WithURL(repoURL), test.WithRef("dev"))
 
 		// when
@@ -210,51 +195,4 @@ func TestRepositoryServiceUsesHeadCallsWhenAnonymousSecretIsUsed(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, languageList, 0)
 	}
-}
-
-func mockGHCalls(t *testing.T, prjPath, branch string, files, langs test.SliceOfStrings) {
-	var entries []gogh.TreeEntry
-	for _, file := range files() {
-		entries = append(entries, gogh.TreeEntry{
-			SHA:  sha(file),
-			Path: String(file),
-		})
-	}
-	tree := gogh.Tree{
-		SHA:       sha(files()...),
-		Truncated: Boolean(false),
-		Entries:   entries,
-	}
-
-	bytes, err := json.Marshal(tree)
-	require.NoError(t, err)
-
-	gock.New("https://api.github.com").
-		Get(fmt.Sprintf("/repos/%s/git/trees/%s", prjPath, branch)).
-		Reply(200).
-		BodyString(string(bytes))
-
-	languages := map[string]int{}
-	for _, lang := range langs() {
-		languages[lang] = rand.Int()
-	}
-
-	bytes, err = json.Marshal(languages)
-	require.NoError(t, err)
-
-	gock.New("https://api.github.com").
-		Get(fmt.Sprintf("/repos/%s/languages", prjPath)).
-		Reply(200).
-		BodyString(string(bytes))
-}
-
-func sha(files ...string) *string {
-	return String(string(sha1.New().Sum([]byte(strings.Join(files, "-")))))
-}
-
-func String(value string) *string {
-	return &value
-}
-func Boolean(value bool) *bool {
-	return &value
 }
