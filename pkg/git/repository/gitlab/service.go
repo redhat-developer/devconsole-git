@@ -21,8 +21,8 @@ type RepositoryService struct {
 // NewRepoServiceIfMatches returns function creating Github repository service if either host of the git repo URL is gitlab.com
 // or flavor of the given git source is gitlab then, nil otherwise
 func NewRepoServiceIfMatches() repository.ServiceCreator {
-	return func(gitSource *v1alpha1.GitSource, secret git.Secret) (repository.GitService, error) {
-		if secret.SecretType() == git.SshKeyType {
+	return func(gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (repository.GitService, error) {
+		if secretProvider.SecretType() == git.SshKeyType {
 			return nil, nil
 		}
 		endpoint, err := gittransport.NewEndpoint(gitSource.Spec.URL)
@@ -31,6 +31,7 @@ func NewRepoServiceIfMatches() repository.ServiceCreator {
 		}
 
 		if endpoint.Host == gitlabHost || gitSource.Spec.Flavor == gitlabFlavor {
+			secret := secretProvider.GetSecret(git.NewOauthToken([]byte("")))
 			return newGhClient(gitSource, secret, endpoint)
 		}
 		return nil, nil

@@ -19,18 +19,25 @@ var gitServiceCreators = []repository.ServiceCreator{
 	gitlab.NewRepoServiceIfMatches(),
 }
 
-// DetectBuildEnvironments detects build tools and languages in the git repository defined by the given v1alpha1.GitSource
-func DetectBuildEnvironments(gitSource *v1alpha1.GitSource, secret git.Secret) (*BuildEnvStats, error) {
-	return detectBuildEnvs(gitSource, secret, gitServiceCreators)
+// DetectBuildEnvironmentsWithSecret detects build tools and languages using the given secret in the git repository
+// defined by the given v1alpha1.GitSource
+func DetectBuildEnvironmentsWithSecret(gitSource *v1alpha1.GitSource, secret git.Secret) (*v1alpha1.BuildEnvStats, error) {
+	return DetectBuildEnvironments(gitSource, git.NewSecretProvider(secret))
 }
 
-func detectBuildEnvs(gitSource *v1alpha1.GitSource, secret git.Secret, serviceCreators []repository.ServiceCreator) (*BuildEnvStats, error) {
-	service, err := repository.NewGitService(gitSource, secret, serviceCreators)
+// DetectBuildEnvironments detects build tools and languages using the secret provided by the SecretProvider
+// in the git repository defined by the given v1alpha1.GitSource
+func DetectBuildEnvironments(gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (*v1alpha1.BuildEnvStats, error) {
+	return detectBuildEnvs(gitSource, secretProvider, gitServiceCreators)
+}
+
+func detectBuildEnvs(gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider, serviceCreators []repository.ServiceCreator) (*v1alpha1.BuildEnvStats, error) {
+	service, err := repository.NewGitService(gitSource, secretProvider, serviceCreators)
 	if err != nil {
 		return nil, err
 	}
 	if service == nil {
-		service, err = generic.NewRepositoryService(gitSource, secret)
+		service, err = generic.NewRepositoryService(gitSource, secretProvider)
 		if err != nil {
 			return nil, err
 		}
@@ -38,10 +45,10 @@ func detectBuildEnvs(gitSource *v1alpha1.GitSource, secret git.Secret, serviceCr
 	return detectBuildEnvsUsingService(service)
 }
 
-func detectBuildEnvsUsingService(service repository.GitService) (*BuildEnvStats, error) {
+func detectBuildEnvsUsingService(service repository.GitService) (*v1alpha1.BuildEnvStats, error) {
 	var wg sync.WaitGroup
 	wg.Add(1)
-	detectedBuildTools := make(chan *DetectedBuildTool, len(BuildTools))
+	detectedBuildTools := make(chan *v1alpha1.DetectedBuildType, len(BuildTools))
 	var detectionErr error
 	go func() {
 		defer wg.Done()
@@ -57,20 +64,20 @@ func detectBuildEnvsUsingService(service repository.GitService) (*BuildEnvStats,
 		return nil, detectionErr
 	}
 
-	var environments []*DetectedBuildTool
+	var environments []v1alpha1.DetectedBuildType
 	for detectedBuildTool := range detectedBuildTools {
 		if detectedBuildTool != nil {
-			environments = append(environments, detectedBuildTool)
+			environments = append(environments, *detectedBuildTool)
 		}
 	}
 
-	return &BuildEnvStats{
+	return &v1alpha1.BuildEnvStats{
 		SortedLanguages:    languageList,
-		DetectedBuildTools: environments,
+		DetectedBuildTypes: environments,
 	}, nil
 }
 
-func detectBuildTools(service repository.GitService, detectedBuildTools chan *DetectedBuildTool) error {
+func detectBuildTools(service repository.GitService, detectedBuildTools chan *v1alpha1.DetectedBuildType) error {
 	var wg sync.WaitGroup
 	wg.Add(len(BuildTools))
 

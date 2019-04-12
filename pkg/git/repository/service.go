@@ -13,10 +13,10 @@ type GitService interface {
 }
 
 // ServiceCreator creates an instance of GitService for the given v1alpha1.GitSource
-type ServiceCreator func(gitSource *v1alpha1.GitSource, secret git.Secret) (GitService, error)
+type ServiceCreator func(gitSource *v1alpha1.GitSource, secret *git.SecretProvider) (GitService, error)
 
 // NewGitService returns an instance of GitService for the given v1alpha1.GitSource. If no service is matched then returns nil
-func NewGitService(gitSource *v1alpha1.GitSource, secret git.Secret, serviceCreators []ServiceCreator) (GitService, error) {
+func NewGitService(gitSource *v1alpha1.GitSource, secret *git.SecretProvider, serviceCreators []ServiceCreator) (GitService, error) {
 
 	for _, creator := range serviceCreators {
 		detector, err := creator(gitSource, secret)

@@ -2,6 +2,7 @@ package detector
 
 import (
 	"fmt"
+	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
 	"github.com/redhat-developer/git-service/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -36,13 +37,13 @@ func TestDetectBuildEnvsShouldUseGenericGitIfNotOtherMatches(t *testing.T) {
 	source := test.NewGitSource(test.WithURL(dummyRepo.Path), test.WithFlavor("not-existing"))
 
 	// when
-	buildEnvStats, err := detectBuildEnvs(source, sshKey, allCreators)
+	buildEnvStats, err := detectBuildEnvs(source, git.NewSecretProvider(sshKey), allCreators)
 
 	// then
 	require.NoError(t, err)
 	require.NotNil(t, buildEnvStats)
 
-	buildTools := buildEnvStats.DetectedBuildTools
+	buildTools := buildEnvStats.DetectedBuildTypes
 	require.Len(t, buildTools, 2)
 
 	assertContainsBuildTool(t, buildTools, Maven, "pom.xml")
@@ -76,7 +77,7 @@ func TestFailingGenericGitCreation(t *testing.T) {
 	source := test.NewGitSource(test.WithURL(dummyRepo.Path), test.WithFlavor("not-existing"))
 
 	// when
-	buildEnvStats, err := detectBuildEnvs(source, sshKey, allCreators)
+	buildEnvStats, err := detectBuildEnvs(source, git.NewSecretProvider(sshKey), allCreators)
 
 	// then
 	require.Error(t, err)
@@ -104,34 +105,98 @@ func TestFailingGetLanguagesList(t *testing.T) {
 	require.Nil(t, buildEnvStats)
 }
 
-func TestBitbucketDetectorWithToken(t *testing.T) {
+func TestBitbucketDetectorWithDefault(t *testing.T) {
 	// given
 	glSource := test.NewGitSource(test.WithURL("https://bitbucket.org/mjobanek-rh/quarkus-knative"))
 
 	// when
-	buildEnvStats, err := DetectBuildEnvironments(glSource, git.NewOauthToken([]byte("")))
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(glSource, nil)
 
 	// then
 	require.NoError(t, err)
-	require.Len(t, buildEnvStats.DetectedBuildTools, 1)
-	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTools, Maven, "pom.xml")
+	require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
+	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, Maven, "pom.xml")
 	require.Len(t, buildEnvStats.SortedLanguages, 1)
 	assert.Equal(t, "java", buildEnvStats.SortedLanguages[0])
 }
 
-func TestGitLabDetectorWithToken(t *testing.T) {
+func TestGitLabDetectorWithDefault(t *testing.T) {
 	// given
 	glSource := test.NewGitSource(test.WithURL("https://gitlab.com/matousjobanek/quarkus-knative"))
 
 	// when
-	buildEnvStats, err := DetectBuildEnvironments(glSource, git.NewOauthToken([]byte("")))
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(glSource, nil)
 
 	// then
 	require.NoError(t, err)
-	require.Len(t, buildEnvStats.DetectedBuildTools, 1)
-	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTools, Maven, "pom.xml")
+	require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
+	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, Maven, "pom.xml")
 	require.Len(t, buildEnvStats.SortedLanguages, 1)
 	assert.Equal(t, "Java", buildEnvStats.SortedLanguages[0])
+}
+
+func TestGitHubDetectorWithDefault(t *testing.T) {
+	// given
+	glSource := test.NewGitSource(test.WithURL("https://github.com/MatousJobanek/quarkus-knative"))
+
+	// when
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(glSource, nil)
+
+	// then
+	if err != nil {
+		assert.Contains(t, err.Error(), "API rate limit exceeded")
+	} else {
+		require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
+		assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, Maven, "pom.xml")
+		require.Len(t, buildEnvStats.SortedLanguages, 2)
+		assert.Equal(t, "Java", buildEnvStats.SortedLanguages[0])
+		assert.Equal(t, "Dockerfile", buildEnvStats.SortedLanguages[1])
+	}
+}
+
+func TestGenericGitUsingSshAccessingGitLabWithDefaultCredentials(t *testing.T) {
+	// given
+	glSource := test.NewGitSource(test.WithURL("https://gitlab.com/matousjobanek/quarkus-knative"))
+
+	// when
+	buildEnvStats, err := detectBuildEnvs(glSource, git.NewSecretProvider(nil), []repository.ServiceCreator{})
+
+	// then
+	require.NoError(t, err)
+	require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
+	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, Maven, "pom.xml")
+	require.Len(t, buildEnvStats.SortedLanguages, 6)
+	assert.Contains(t, buildEnvStats.SortedLanguages, "Java")
+}
+
+func TestGenericGitUsingSshAccessingBitbucketWithDefaultCredentials(t *testing.T) {
+	// given
+	glSource := test.NewGitSource(test.WithURL("https://bitbucket.org/mjobanek-rh/quarkus-knative"))
+
+	// when
+	buildEnvStats, err := detectBuildEnvs(glSource, git.NewSecretProvider(nil), []repository.ServiceCreator{})
+
+	// then
+	require.NoError(t, err)
+	require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
+	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, Maven, "pom.xml")
+	require.Len(t, buildEnvStats.SortedLanguages, 6)
+	assert.Contains(t, buildEnvStats.SortedLanguages, "Java")
+}
+
+func TestGenericGitUsingSshAccessingGitHubWithDefaultCredentials(t *testing.T) {
+	// given
+	ghSource := test.NewGitSource(test.WithURL("https://github.com/MatousJobanek/quarkus-knative"))
+
+	// when
+	buildEnvStats, err := detectBuildEnvs(ghSource, git.NewSecretProvider(nil), []repository.ServiceCreator{})
+
+	// then
+	require.NoError(t, err)
+	require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
+	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, Maven, "pom.xml")
+	require.Len(t, buildEnvStats.SortedLanguages, 6)
+	assert.Contains(t, buildEnvStats.SortedLanguages, "Java")
 }
 
 // ignored tests as they reach the real services or needs specific credentials
@@ -144,7 +209,7 @@ func TestGitHubDetectorWithToken(t *testing.T) {
 
 	ghSource := test.NewGitSource(test.WithURL("https://github.com/wildfly/wildfly"))
 
-	buildEnvStats, err := DetectBuildEnvironments(ghSource, git.NewOauthToken(token))
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(ghSource, git.NewOauthToken(token))
 	require.NoError(t, err)
 	printBuildEnvStats(buildEnvStats)
 }
@@ -154,7 +219,7 @@ func TestGitHubDetectorWithUsernameAndPassword(t *testing.T) {
 
 	ghSource := test.NewGitSource(test.WithURL("https://github.com/wildfly/wildfly"))
 
-	buildEnvStats, err := DetectBuildEnvironments(ghSource, git.NewUsernamePassword("anonymous", ""))
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(ghSource, git.NewUsernamePassword("anonymous", ""))
 	require.NoError(t, err)
 	printBuildEnvStats(buildEnvStats)
 }
@@ -167,7 +232,7 @@ func TestGenericGitUsingSshAccessingGitHub(t *testing.T) {
 
 	ghSource := test.NewGitSource(test.WithURL("git@github.com:wildfly/wildfly.git"))
 
-	buildEnvStats, err := DetectBuildEnvironments(ghSource, git.NewSshKey(buffer, []byte("passphrase")))
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(ghSource, git.NewSshKey(buffer, []byte("passphrase")))
 	require.NoError(t, err)
 	printBuildEnvStats(buildEnvStats)
 }
@@ -180,7 +245,7 @@ func TestGenericGitUsingSshAccessingGitLab(t *testing.T) {
 
 	ghSource := test.NewGitSource(test.WithURL("git@gitlab.cee.redhat.com:mjobanek/housekeeping.git"))
 
-	buildEnvStats, err := DetectBuildEnvironments(ghSource, git.NewSshKey(buffer, []byte("passphrase")))
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(ghSource, git.NewSshKey(buffer, []byte("passphrase")))
 	require.NoError(t, err)
 	printBuildEnvStats(buildEnvStats)
 }
@@ -190,7 +255,7 @@ func TestBitbucketDetectorWithUsernameAndPassword(t *testing.T) {
 
 	ghSource := test.NewGitSource(test.WithURL("https://bitbucket.org/atlassian/asap-java"))
 
-	buildEnvStats, err := DetectBuildEnvironments(ghSource, git.NewUsernamePassword("", ""))
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(ghSource, git.NewUsernamePassword("", ""))
 
 	require.NoError(t, err)
 	printBuildEnvStats(buildEnvStats)
@@ -201,14 +266,18 @@ func TestGitLabDetectorWithUsernamePassword(t *testing.T) {
 
 	glSource := test.NewGitSource(test.WithURL("https://gitlab.com/gitlab-org/gitlab-qa"))
 
-	buildEnvStats, err := DetectBuildEnvironments(glSource, git.NewUsernamePassword("", ""))
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(glSource, git.NewUsernamePassword("", ""))
 	require.NoError(t, err)
 	printBuildEnvStats(buildEnvStats)
 }
 
-func printBuildEnvStats(buildEnvStats *BuildEnvStats) {
+func assertContainsBuildTool(t *testing.T, detected []v1alpha1.DetectedBuildType, buildTool BuildTool, files ...string) {
+	test.AssertContainsBuildTool(t, detected, buildTool.Name, buildTool.Language, files...)
+}
+
+func printBuildEnvStats(buildEnvStats *v1alpha1.BuildEnvStats) {
 	fmt.Println(buildEnvStats.SortedLanguages)
-	for _, build := range buildEnvStats.DetectedBuildTools {
-		fmt.Println(*build)
+	for _, build := range buildEnvStats.DetectedBuildTypes {
+		fmt.Println(build)
 	}
 }
