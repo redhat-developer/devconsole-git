@@ -44,18 +44,8 @@ func TestDetectBuildEnvsShouldUseGenericGitIfNotOtherMatches(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, buildEnvStats)
 
-	buildTools := buildEnvStats.DetectedBuildTypes
-	require.Len(t, buildTools, 2)
-
-	assertContainsBuildTool(t, buildTools, build.Maven, "pom.xml")
-	assertContainsBuildTool(t, buildTools, build.NodeJS, "package.json")
-
-	langs := buildEnvStats.SortedLanguages
-	assert.Len(t, langs, 4)
-	assert.Equal(t, "Go", langs[0])
-	assert.Equal(t, "Java", langs[1])
-	assert.Equal(t, "JSON", langs[2])
-	assert.Equal(t, "XML", langs[3])
+	assert.Empty(t, buildEnvStats.DetectedBuildTypes)
+	assert.Empty(t, buildEnvStats.SortedLanguages)
 }
 
 func TestFailingCreator(t *testing.T) {
@@ -81,9 +71,9 @@ func TestFailingGenericGitCreation(t *testing.T) {
 	buildEnvStats, err := detectBuildEnvs(logger, source, git.NewSecretProvider(sshKey), allEnvServiceCreators(true))
 
 	// then
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "cannot decode encrypted private keys")
-	require.Nil(t, buildEnvStats)
+	require.NoError(t, err)
+	assert.Empty(t, buildEnvStats.DetectedBuildTypes)
+	assert.Empty(t, buildEnvStats.SortedLanguages)
 }
 
 func TestFailingGetFileList(t *testing.T) {
@@ -158,10 +148,8 @@ func TestGenericGitUsingSshAccessingGitLabWithDefaultCredentials(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
-	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, build.Maven, "pom.xml")
-	require.Len(t, buildEnvStats.SortedLanguages, 6)
-	assert.Contains(t, buildEnvStats.SortedLanguages, "Java")
+	assert.Empty(t, buildEnvStats.DetectedBuildTypes)
+	assert.Empty(t, buildEnvStats.SortedLanguages)
 }
 
 func TestGenericGitUsingSshAccessingBitbucketWithDefaultCredentials(t *testing.T) {
@@ -173,10 +161,8 @@ func TestGenericGitUsingSshAccessingBitbucketWithDefaultCredentials(t *testing.T
 
 	// then
 	require.NoError(t, err)
-	require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
-	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, build.Maven, "pom.xml")
-	require.Len(t, buildEnvStats.SortedLanguages, 6)
-	assert.Contains(t, buildEnvStats.SortedLanguages, "Java")
+	assert.Empty(t, buildEnvStats.DetectedBuildTypes)
+	assert.Empty(t, buildEnvStats.SortedLanguages)
 }
 
 func TestGenericGitUsingSshAccessingGitHubWithDefaultCredentials(t *testing.T) {
@@ -188,10 +174,8 @@ func TestGenericGitUsingSshAccessingGitHubWithDefaultCredentials(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	require.Len(t, buildEnvStats.DetectedBuildTypes, 1)
-	assertContainsBuildTool(t, buildEnvStats.DetectedBuildTypes, build.Maven, "pom.xml")
-	require.Len(t, buildEnvStats.SortedLanguages, 6)
-	assert.Contains(t, buildEnvStats.SortedLanguages, "Java")
+	assert.Empty(t, buildEnvStats.DetectedBuildTypes)
+	assert.Empty(t, buildEnvStats.SortedLanguages)
 }
 
 // ignored tests as they reach the real services or needs specific credentials
