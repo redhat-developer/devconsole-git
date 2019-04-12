@@ -8,14 +8,14 @@ import (
 	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
 	gittransport "gopkg.in/src-d/go-git.v4/plumbing/transport"
-	"strings"
 )
 
 const (
-	githubHost           = "github.com"
-	githubFlavor         = "github"
-	apiRateLimitErrorMsg = "API rate limit exceeded for"
+	githubHost   = "github.com"
+	githubFlavor = "github"
 )
+
+var anonymousSecret = git.NewUsernamePassword("anonymous", "")
 
 type RepositoryService struct {
 	gitSource *v1alpha1.GitSource
@@ -37,7 +37,7 @@ func NewRepoServiceIfMatches() repository.ServiceCreator {
 			return nil, err
 		}
 		if endpoint.Host == githubHost || gitSource.Spec.Flavor == githubFlavor {
-			secret := secretProvider.GetSecret(git.NewUsernamePassword("anonymous", ""))
+			secret := secretProvider.GetSecret(anonymousSecret)
 			return newGhService(gitSource, endpoint, secret)
 		}
 		return nil, nil
@@ -65,6 +65,11 @@ func newGhService(gitSource *v1alpha1.GitSource, endpoint *gittransport.Endpoint
 }
 
 func (s *RepositoryService) FileExistenceChecker() (repository.FileExistenceChecker, error) {
+	if isAnonymousSecret(s.secret) {
+		baseURL := fmt.Sprintf("https://github.com/%s/%s/blob/%s/", s.repo.Owner, s.repo.Name, s.repo.Branch)
+		return repository.NewCheckerUsingHeaderRequests(baseURL, s.secret), nil
+	}
+
 	tree, _, err := s.client.Git.GetTree(
 		context.Background(),
 		s.repo.Owner,
@@ -72,10 +77,6 @@ func (s *RepositoryService) FileExistenceChecker() (repository.FileExistenceChec
 		s.repo.Branch,
 		false)
 	if err != nil {
-		if strings.Contains(err.Error(), apiRateLimitErrorMsg) {
-			baseURL := fmt.Sprintf("https://github.com/%s/%s/blob/%s/", s.repo.Owner, s.repo.Name, s.repo.Branch)
-			return repository.NewCheckerUsingHeaderRequests(baseURL, s.secret), nil
-		}
 		return nil, err
 	}
 	var filenames []string
@@ -86,17 +87,23 @@ func (s *RepositoryService) FileExistenceChecker() (repository.FileExistenceChec
 }
 
 func (s *RepositoryService) GetLanguageList() ([]string, error) {
+	if isAnonymousSecret(s.secret) {
+		return []string{}, nil
+	}
+
 	languages, _, err := s.client.Repositories.ListLanguages(
 		context.Background(),
 		s.repo.Owner,
 		s.repo.Name)
 
 	if err != nil {
-		if strings.Contains(err.Error(), apiRateLimitErrorMsg) {
-			return []string{}, nil
-		}
 		return nil, err
 	}
 
 	return git.SortLanguagesWithInts(languages), nil
+}
+
+func isAnonymousSecret(secret git.Secret) bool {
+	return secret.SecretType() == git.UsernamePasswordType &&
+		secret.SecretContent() == anonymousSecret.SecretContent()
 }

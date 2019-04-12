@@ -32,9 +32,9 @@ const (
 )
 
 var (
-	usernamePassword = git.NewUsernamePassword("anonymous", "")
+	usernamePassword = git.NewUsernamePassword("some-user", "some-password")
 	oauthToken       = git.NewOauthToken([]byte("some-token"))
-	validSecrets     = []git.Secret{usernamePassword, oauthToken, nil}
+	validSecrets     = []git.Secret{usernamePassword, oauthToken}
 )
 
 func TestRepositoryServiceForAllValidAuthMethodsSuccessful(t *testing.T) {
@@ -158,6 +158,31 @@ func TestRepositoryServiceReturningRateLimit(t *testing.T) {
 			Times(2).
 			Reply(403).
 			BodyString(apiRateLimit)
+		source := test.NewGitSource(test.WithURL(repoURL))
+
+		// when
+		service, err := github.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
+
+		// then
+		require.NoError(t, err)
+
+		checker, err := service.FileExistenceChecker()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "API rate limit exceeded")
+		require.Nil(t, checker)
+
+		languageList, err := service.GetLanguageList()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "API rate limit exceeded")
+		require.Len(t, languageList, 0)
+	}
+}
+
+func TestRepositoryServiceUsesHeadCallsWhenAnonymousSecretIsUsed(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	for _, secret := range []git.Secret{git.NewUsernamePassword("anonymous", ""), nil} {
 		gock.New("https://github.com").
 			Head(fmt.Sprintf("/%s/blob/%s/pom.xml", repoIdentifier, "dev")).
 			Reply(200)
@@ -165,7 +190,6 @@ func TestRepositoryServiceReturningRateLimit(t *testing.T) {
 
 		// when
 		service, err := github.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
-
 		// then
 		require.NoError(t, err)
 
