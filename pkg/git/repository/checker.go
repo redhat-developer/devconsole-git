@@ -115,13 +115,13 @@ func (c *checkerUsingHeaderRequests) fileExists(client *http.Client, buildToolFi
 	if err != nil {
 		return false
 	} else {
-		defer func() {
-			err := resp.Body.Close()
-			c.log.Error(err, "error while closing body")
-		}()
 		_, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			c.log.Error(err, "error while reading body")
+		}
+		err = resp.Body.Close()
+		if err != nil {
+			c.log.Error(err, "error while closing body")
 		}
 		return resp.StatusCode == 200
 	}
