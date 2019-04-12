@@ -4,8 +4,10 @@ import (
 	"encoding/base64"
 	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/detector/build"
+	"io/ioutil"
 	"net/http"
 	"regexp"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sync"
 )
 
@@ -111,7 +113,14 @@ func (c *checkerUsingHeaderRequests) fileExists(client *http.Client, buildToolFi
 	if err != nil {
 		return false
 	} else {
-		resp.Body.Close()
+		defer func() {
+			err := resp.Body.Close()
+			logf.Log.Error(err, "error while closing body", "url", url)
+		}()
+		_, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			logf.Log.Error(err, "error while reading body", "url", url)
+		}
 		return resp.StatusCode == 200
 	}
 }
