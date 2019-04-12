@@ -1,8 +1,6 @@
 package detector
 
 import (
-	"fmt"
-	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
 	"github.com/redhat-developer/git-service/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -213,25 +211,6 @@ func TestDetectDotnet(t *testing.T) {
 	langs := buildEnvStats.SortedLanguages
 	assert.Len(t, langs, 1)
 	assert.Equal(t, "C#", langs[0])
-}
-
-func assertContainsBuildTool(t *testing.T, detected []v1alpha1.DetectedBuildType, expectedBuildTool BuildTool, files ...string) {
-	var found bool
-	for _, tool := range detected {
-		if tool.Name == expectedBuildTool.Name {
-			assert.Equal(t, expectedBuildTool.Language, tool.Language)
-			assert.Len(t, tool.DetectedFiles, len(files))
-			for _, file := range files {
-				assert.Contains(t, tool.DetectedFiles, file)
-			}
-			found = true
-			break
-		}
-	}
-	if !found {
-		assert.Fail(t, fmt.Sprintf("the list %v does not contain tool with name %s, language %s and files %v",
-			detected, expectedBuildTool.Name, expectedBuildTool.Language, files))
-	}
 }
 
 func allEnvServiceCreators() []repository.ServiceCreator {

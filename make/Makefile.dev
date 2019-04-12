@@ -1,4 +1,6 @@
-DOCKER_REPO?=quay.io/openshiftio
+DOCKER_REGISTRY?=quay.io
+DOCKER_REPOSITORY?=openshiftio
+DOCKER_REPO?=$(DOCKER_REGISTRY)/$(DOCKER_REPOSITORY)
 IMAGE_NAME?=git-service
 SHORT_COMMIT=$(shell git rev-parse --short HEAD)
 ifneq ($(GITUNTRACKEDCHANGES),)
@@ -8,6 +10,8 @@ endif
 TIMESTAMP:=$(shell date +%s)
 TAG?=$(SHORT_COMMIT)-$(TIMESTAMP)
 
+NAMESPACE_NAME?=openshift-devops-console
+
 DEPLOY_DIR:=deploy
 
 .PHONY: create-resources
@@ -16,25 +20,39 @@ create-resources:
 	@oc login -u system:admin
 	@echo "Creating sub resources..."
 	@echo "Creating CRDs..."
-	@oc create -f https://raw.githubusercontent.com/redhat-developer/devconsole-operator/master/deploy/crds/devopsconsole_v1alpha1_gitsource_crd.yaml
+	@oc create -f https://raw.githubusercontent.com/redhat-developer/devconsole-operator/master/deploy/crds/devconsole_v1alpha1_gitsource_crd.yaml
+	@oc create -f https://raw.githubusercontent.com/redhat-developer/devconsole-operator/master/deploy/crds/devconsole_v1alpha1_gitsourceanalysis_crd.yaml
 	@echo "Creating Namespace"
 	@oc create -f $(DEPLOY_DIR)/namespace.yaml
+	@echo "Switching to the namespace $(NAMESPACE_NAME)"
+	@oc project $(NAMESPACE_NAME)
+	@echo "Creating Role"
+	@oc create -f $(DEPLOY_DIR)/role.yaml
+	@echo "Creating RoleBinding"
+	@oc create -f $(DEPLOY_DIR)/role_binding.yaml
+	@echo "Creating ServiceAccount"
+	@oc create -f $(DEPLOY_DIR)/service_account.yaml
 
 .PHONY: build-image
 build-image:
 	docker build -t $(DOCKER_REPO)/$(IMAGE_NAME):$(TAG) -f Dockerfile.dev .
 	docker tag $(DOCKER_REPO)/$(IMAGE_NAME):$(TAG) $(DOCKER_REPO)/$(IMAGE_NAME):test
+	docker push $(DOCKER_REPO)/$(IMAGE_NAME):$(TAG)
 
-.PHONY: deploy-gitserver-only
-deploy-gitserver-only:
-	@echo "Creating Git Server..."
+.PHONY: deploy-gitsource-operator-only
+deploy-gitsource-operator-only:
+	@echo "Switching to the namespace $(NAMESPACE_NAME)"
+	@oc project $(NAMESPACE_NAME)
+	@echo "Creating GitSource Operator"
+	@cat $(DEPLOY_DIR)/operator.yaml | sed 's/IMAGE/$(DOCKER_REGISTRY)\/$(DOCKER_REPOSITORY)\/$(IMAGE_NAME):$(TAG)/' | oc apply -f -
 
 .PHONY: clean-all
-clean-all:  clean-gitserver clean-resources
+clean-all:  clean-gitsource clean-resources
 
-.PHONY: clean-gitserver
-clean-gitserver:
-	@echo "Deleting API Server..."
+.PHONY: clean-gitsource
+clean-gitsource:
+	@echo "Deleting GitSource Operator"
+	@cat $(DEPLOY_DIR)/operator.yaml | sed 's/IMAGE/$(DOCKER_REGISTRY)\/$(DOCKER_REPOSITORY)\/$(IMAGE_NAME):$(TAG)/' | oc delete -f - || true
 
 .PHONY: clean-resources
 clean-resources:
@@ -42,10 +60,17 @@ clean-resources:
 	@echo "Deleting Namespace"
 	@oc delete -f $(DEPLOY_DIR)/namespace.yaml || true
 	@echo "Deleting CRDs..."
-	@oc delete -f https://raw.githubusercontent.com/redhat-developer/devconsole-operator/master/deploy/crds/devopsconsole_v1alpha1_gitsource_crd.yaml || true
+	@oc delete -f https://raw.githubusercontent.com/redhat-developer/devconsole-operator/master/deploy/crds/devconsole_v1alpha1_gitsource_crd.yaml || true
+	@oc delete -f https://raw.githubusercontent.com/redhat-developer/devconsole-operator/master/deploy/crds/devconsole_v1alpha1_gitsourceanalysis_crd.yaml || true
+	@echo "Deleting Role"
+	@oc delete -f $(DEPLOY_DIR)/role.yaml || true
+	@echo "Deleting RoleBinding"
+	@oc delete -f $(DEPLOY_DIR)/role_binding.yaml || true
+	@echo "Deleting ServiceAccount"
+	@oc delete -f $(DEPLOY_DIR)/service_account.yaml || true
 
-.PHONY: deploy-gitserver
-deploy-gitserver: build build-image deploy-gitserver-only
+.PHONY: deploy-gitsource
+deploy-gitsource: build build-image deploy-gitsource-operator-only
 
 .PHONY: minishift-start
 minishift-start:
@@ -53,4 +78,4 @@ minishift-start:
 	-eval `minishift docker-env` && oc login -u system:admin
 
 .PHONY: deploy-all
-deploy-all: clean-resources create-resources deps prebuild-check deploy-gitserver
+deploy-all: clean-gitsource clean-resources create-resources deps prebuild-check deploy-gitsource

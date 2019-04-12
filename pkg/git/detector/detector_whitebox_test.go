@@ -110,7 +110,7 @@ func TestBitbucketDetectorWithDefault(t *testing.T) {
 	glSource := test.NewGitSource(test.WithURL("https://bitbucket.org/mjobanek-rh/quarkus-knative"))
 
 	// when
-	buildEnvStats, err := DetectBuildEnvironments(glSource)
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(glSource, nil)
 
 	// then
 	require.NoError(t, err)
@@ -125,7 +125,7 @@ func TestGitLabDetectorWithDefault(t *testing.T) {
 	glSource := test.NewGitSource(test.WithURL("https://gitlab.com/matousjobanek/quarkus-knative"))
 
 	// when
-	buildEnvStats, err := DetectBuildEnvironments(glSource)
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(glSource, nil)
 
 	// then
 	require.NoError(t, err)
@@ -140,7 +140,7 @@ func TestGitHubDetectorWithDefault(t *testing.T) {
 	glSource := test.NewGitSource(test.WithURL("https://github.com/MatousJobanek/quarkus-knative"))
 
 	// when
-	buildEnvStats, err := DetectBuildEnvironments(glSource)
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(glSource, nil)
 
 	// then
 	if err != nil {
@@ -269,6 +269,10 @@ func TestGitLabDetectorWithUsernamePassword(t *testing.T) {
 	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(glSource, git.NewUsernamePassword("", ""))
 	require.NoError(t, err)
 	printBuildEnvStats(buildEnvStats)
+}
+
+func assertContainsBuildTool(t *testing.T, detected []v1alpha1.DetectedBuildType, buildTool BuildTool, files ...string) {
+	test.AssertContainsBuildTool(t, detected, buildTool.Name, buildTool.Language, files...)
 }
 
 func printBuildEnvStats(buildEnvStats *v1alpha1.BuildEnvStats) {
