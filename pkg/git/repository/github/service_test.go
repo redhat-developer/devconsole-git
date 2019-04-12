@@ -5,10 +5,12 @@ import (
 	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/detector/build"
 	"github.com/redhat-developer/git-service/pkg/git/repository/github"
+	"github.com/redhat-developer/git-service/pkg/log"
 	"github.com/redhat-developer/git-service/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/h2non/gock.v1"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"testing"
 )
 
@@ -26,6 +28,7 @@ var (
 	usernamePassword = git.NewUsernamePassword("some-user", "some-password")
 	oauthToken       = git.NewOauthToken([]byte("some-token"))
 	validSecrets     = []git.Secret{usernamePassword, oauthToken}
+	logger           = &log.GitSourceLogger{Logger: logf.Log}
 )
 
 func TestRepositoryServiceForAllValidAuthMethodsSuccessful(t *testing.T) {
@@ -37,7 +40,7 @@ func TestRepositoryServiceForAllValidAuthMethodsSuccessful(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(repoURL))
 
 		// when
-		service, err := github.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
+		service, err := github.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)
@@ -62,7 +65,7 @@ func TestNewRepoServiceIfMatchesShouldNotMatchWhenSshKey(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("git@github.com:" + repoIdentifier))
 
 	// when
-	service, err := github.NewRepoServiceIfMatches()(source,
+	service, err := github.NewRepoServiceIfMatches()(logger, source,
 		git.NewSecretProvider(git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte(""))))
 
 	// then
@@ -75,7 +78,7 @@ func TestNewRepoServiceIfMatchesShouldNotMatchWhenGitLabHost(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("gitlab.com/" + repoIdentifier))
 
 	// when
-	service, err := github.NewRepoServiceIfMatches()(source,
+	service, err := github.NewRepoServiceIfMatches()(logger, source,
 		git.NewSecretProvider(git.NewOauthToken([]byte("some-token"))))
 
 	// then
@@ -88,7 +91,7 @@ func TestNewRepoServiceIfMatchesShouldMatchWhenFlavorIsGitHub(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("gitprivatehub.com/"+repoIdentifier), test.WithFlavor("github"))
 
 	// when
-	service, err := github.NewRepoServiceIfMatches()(source,
+	service, err := github.NewRepoServiceIfMatches()(logger, source,
 		git.NewSecretProvider(git.NewOauthToken([]byte("some-token"))))
 
 	// then
@@ -101,7 +104,7 @@ func TestNewRepoServiceIfMatchesShouldNotFailWhenSsh(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("git@github.com:" + repoIdentifier))
 
 	// when
-	service, err := github.NewRepoServiceIfMatches()(source,
+	service, err := github.NewRepoServiceIfMatches()(logger, source,
 		git.NewSecretProvider(git.NewOauthToken([]byte("some-token"))))
 
 	// then
@@ -118,7 +121,7 @@ func TestRepositoryServiceForWrongRepo(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(repoURL), test.WithRef("dev"))
 
 		// when
-		service, err := github.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
+		service, err := github.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)
@@ -148,7 +151,7 @@ func TestRepositoryServiceReturningRateLimit(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(repoURL))
 
 		// when
-		service, err := github.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
+		service, err := github.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)
@@ -174,7 +177,7 @@ func TestRepositoryServiceUsesHeadCallsWhenAnonymousSecretIsUsed(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(repoURL), test.WithRef("dev"))
 
 		// when
-		service, err := github.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
+		service, err := github.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
 		// then
 		require.NoError(t, err)
 

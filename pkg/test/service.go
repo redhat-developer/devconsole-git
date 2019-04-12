@@ -5,7 +5,9 @@ import (
 	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
+	"github.com/redhat-developer/git-service/pkg/log"
 	"gopkg.in/h2non/gock.v1"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 const (
@@ -51,7 +53,7 @@ func (s *DummyService) FileExistenceChecker() (repository.FileExistenceChecker, 
 				Head(urlPath + file + "$").
 				Reply(200)
 		}
-		return repository.NewCheckerUsingHeaderRequests(headerCheckerBaseURL,
+		return repository.NewCheckerUsingHeaderRequests(&log.GitSourceLogger{Logger: logf.Log}, headerCheckerBaseURL,
 			git.NewUsernamePassword("anynomous", "")), nil
 	} else {
 		return repository.NewCheckerWithFetchedFiles(s.Files), nil
@@ -65,7 +67,7 @@ func (s *DummyService) GetLanguageList() ([]string, error) {
 }
 
 func (s *DummyService) Creator() repository.ServiceCreator {
-	return func(gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (service repository.GitService, e error) {
+	return func(log *log.GitSourceLogger, gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (service repository.GitService, e error) {
 		if s.shouldFail {
 			return nil, fmt.Errorf("creation failed")
 		}

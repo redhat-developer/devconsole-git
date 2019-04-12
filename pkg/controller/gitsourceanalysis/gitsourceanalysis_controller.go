@@ -103,7 +103,7 @@ func analyze(logger logr.Logger, client client.Client, gsAnalysis *v1alpha1.GitS
 			Error(err, "There was an error while reading the GitSource object")
 
 	} else {
-		buildEnvStats, err := analyzeGitSource(logger, client, gitSource, namespace)
+		buildEnvStats, err := analyzeGitSource(log.LogWithGSValues(logger, gitSource), client, gitSource, namespace)
 		if err != nil {
 			gsAnalysis.Status.Error = err.Error()
 		} else {
@@ -128,20 +128,20 @@ func analyze(logger logr.Logger, client client.Client, gsAnalysis *v1alpha1.GitS
 	return reconcile.Result{}, nil
 }
 
-func analyzeGitSource(logger logr.Logger, client client.Client, gitSource *v1alpha1.GitSource, namespace string) (*v1alpha1.BuildEnvStats, error) {
-	log.LogWithGSValues(logger, gitSource).Info("Analyzing GitSource")
+func analyzeGitSource(logger *log.GitSourceLogger, client client.Client, gitSource *v1alpha1.GitSource, namespace string) (*v1alpha1.BuildEnvStats, error) {
+	logger.Info("Analyzing GitSource")
 
 	// Fetch the GitSource secret
 	gitSecretProvider, err := git.NewGitSecretProvider(client, namespace, gitSource)
 	if err != nil {
-		log.LogWithGSValues(logger, gitSource, "secret", gitSource.Spec.SecretRef.Name).
+		logger.WithValues("secret", gitSource.Spec.SecretRef.Name).
 			Error(err, "Error reading the secret object")
 		return nil, err
 
 	} else {
-		buildEnvStats, err := detector.DetectBuildEnvironments(gitSource, gitSecretProvider)
+		buildEnvStats, err := detector.DetectBuildEnvironments(logger, gitSource, gitSecretProvider)
 		if err != nil {
-			log.LogWithGSValues(logger, gitSource).Error(err, "Error detecting build types")
+			logger.Error(err, "Error detecting build types")
 		}
 		return buildEnvStats, err
 	}

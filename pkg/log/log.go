@@ -5,7 +5,11 @@ import (
 	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 )
 
-func LogWithGSValues(log logr.Logger, gitSource *v1alpha1.GitSource, additional ...interface{}) logr.Logger {
+type GitSourceLogger struct {
+	logr.Logger
+}
+
+func LogWithGSValues(log logr.Logger, gitSource *v1alpha1.GitSource, additional ...interface{}) *GitSourceLogger {
 	var values []interface{}
 	if gitSource != nil {
 		values = []interface{}{
@@ -15,5 +19,5 @@ func LogWithGSValues(log logr.Logger, gitSource *v1alpha1.GitSource, additional 
 			"flavor", gitSource.Spec.Flavor,
 		}
 	}
-	return log.WithValues(append(values, additional...)...)
+	return &GitSourceLogger{Logger: log.WithValues(append(values, additional...)...)}
 }

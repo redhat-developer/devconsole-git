@@ -38,7 +38,7 @@ func TestDetectBuildEnvsShouldUseGenericGitIfNotOtherMatches(t *testing.T) {
 	source := test.NewGitSource(test.WithURL(dummyRepo.Path), test.WithFlavor("not-existing"))
 
 	// when
-	buildEnvStats, err := detectBuildEnvs(source, git.NewSecretProvider(sshKey), allEnvServiceCreators(true))
+	buildEnvStats, err := detectBuildEnvs(logger, source, git.NewSecretProvider(sshKey), allEnvServiceCreators(true))
 
 	// then
 	require.NoError(t, err)
@@ -63,7 +63,7 @@ func TestFailingCreator(t *testing.T) {
 	source := test.NewGitSource(test.WithFlavor(failingService.Flavor))
 
 	// when
-	buildEnvStats, err := detectBuildEnvs(source, nil, append(allEnvServiceCreators(true), failingService.Creator()))
+	buildEnvStats, err := detectBuildEnvs(logger, source, nil, append(allEnvServiceCreators(true), failingService.Creator()))
 
 	// then
 	require.Error(t, err)
@@ -78,7 +78,7 @@ func TestFailingGenericGitCreation(t *testing.T) {
 	source := test.NewGitSource(test.WithURL(dummyRepo.Path), test.WithFlavor("not-existing"))
 
 	// when
-	buildEnvStats, err := detectBuildEnvs(source, git.NewSecretProvider(sshKey), allEnvServiceCreators(true))
+	buildEnvStats, err := detectBuildEnvs(logger, source, git.NewSecretProvider(sshKey), allEnvServiceCreators(true))
 
 	// then
 	require.Error(t, err)
@@ -111,7 +111,7 @@ func TestBitbucketDetectorWithDefault(t *testing.T) {
 	glSource := test.NewGitSource(test.WithURL("https://bitbucket.org/mjobanek-rh/quarkus-knative"))
 
 	// when
-	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(glSource, nil)
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(logger, glSource, nil)
 
 	// then
 	require.NoError(t, err)
@@ -126,7 +126,7 @@ func TestGitLabDetectorWithDefault(t *testing.T) {
 	glSource := test.NewGitSource(test.WithURL("https://gitlab.com/matousjobanek/quarkus-knative"))
 
 	// when
-	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(glSource, nil)
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(logger, glSource, nil)
 
 	// then
 	require.NoError(t, err)
@@ -141,7 +141,7 @@ func TestGitHubDetectorWithDefault(t *testing.T) {
 	glSource := test.NewGitSource(test.WithURL("https://github.com/MatousJobanek/quarkus-knative"))
 
 	// when
-	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(glSource, nil)
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(logger, glSource, nil)
 
 	// then
 	require.NoError(t, err)
@@ -154,7 +154,7 @@ func TestGenericGitUsingSshAccessingGitLabWithDefaultCredentials(t *testing.T) {
 	glSource := test.NewGitSource(test.WithURL("https://gitlab.com/matousjobanek/quarkus-knative"))
 
 	// when
-	buildEnvStats, err := detectBuildEnvs(glSource, git.NewSecretProvider(nil), []repository.ServiceCreator{})
+	buildEnvStats, err := detectBuildEnvs(logger, glSource, git.NewSecretProvider(nil), []repository.ServiceCreator{})
 
 	// then
 	require.NoError(t, err)
@@ -169,7 +169,7 @@ func TestGenericGitUsingSshAccessingBitbucketWithDefaultCredentials(t *testing.T
 	glSource := test.NewGitSource(test.WithURL("https://bitbucket.org/mjobanek-rh/quarkus-knative"))
 
 	// when
-	buildEnvStats, err := detectBuildEnvs(glSource, git.NewSecretProvider(nil), []repository.ServiceCreator{})
+	buildEnvStats, err := detectBuildEnvs(logger, glSource, git.NewSecretProvider(nil), []repository.ServiceCreator{})
 
 	// then
 	require.NoError(t, err)
@@ -184,7 +184,7 @@ func TestGenericGitUsingSshAccessingGitHubWithDefaultCredentials(t *testing.T) {
 	ghSource := test.NewGitSource(test.WithURL("https://github.com/MatousJobanek/quarkus-knative"))
 
 	// when
-	buildEnvStats, err := detectBuildEnvs(ghSource, git.NewSecretProvider(nil), []repository.ServiceCreator{})
+	buildEnvStats, err := detectBuildEnvs(logger, ghSource, git.NewSecretProvider(nil), []repository.ServiceCreator{})
 
 	// then
 	require.NoError(t, err)
@@ -204,7 +204,7 @@ func TestGitHubDetectorWithToken(t *testing.T) {
 
 	ghSource := test.NewGitSource(test.WithURL("https://github.com/wildfly/wildfly"))
 
-	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(ghSource, git.NewOauthToken(token))
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(logger, ghSource, git.NewOauthToken(token))
 	require.NoError(t, err)
 	printBuildEnvStats(buildEnvStats)
 }
@@ -214,7 +214,7 @@ func TestGitHubDetectorWithUsernameAndPassword(t *testing.T) {
 
 	ghSource := test.NewGitSource(test.WithURL("https://github.com/wildfly/wildfly"))
 
-	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(ghSource, git.NewUsernamePassword("anonymous", ""))
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(logger, ghSource, git.NewUsernamePassword("anonymous", ""))
 	require.NoError(t, err)
 	printBuildEnvStats(buildEnvStats)
 }
@@ -227,7 +227,7 @@ func TestGenericGitUsingSshAccessingGitHub(t *testing.T) {
 
 	ghSource := test.NewGitSource(test.WithURL("git@github.com:wildfly/wildfly.git"))
 
-	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(ghSource, git.NewSshKey(buffer, []byte("passphrase")))
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(logger, ghSource, git.NewSshKey(buffer, []byte("passphrase")))
 	require.NoError(t, err)
 	printBuildEnvStats(buildEnvStats)
 }
@@ -240,7 +240,7 @@ func TestGenericGitUsingSshAccessingGitLab(t *testing.T) {
 
 	ghSource := test.NewGitSource(test.WithURL("git@gitlab.cee.redhat.com:mjobanek/housekeeping.git"))
 
-	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(ghSource, git.NewSshKey(buffer, []byte("passphrase")))
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(logger, ghSource, git.NewSshKey(buffer, []byte("passphrase")))
 	require.NoError(t, err)
 	printBuildEnvStats(buildEnvStats)
 }
@@ -250,7 +250,7 @@ func TestBitbucketDetectorWithUsernameAndPassword(t *testing.T) {
 
 	ghSource := test.NewGitSource(test.WithURL("https://bitbucket.org/atlassian/asap-java"))
 
-	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(ghSource, git.NewUsernamePassword("", ""))
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(logger, ghSource, git.NewUsernamePassword("", ""))
 
 	require.NoError(t, err)
 	printBuildEnvStats(buildEnvStats)
@@ -261,7 +261,7 @@ func TestGitLabDetectorWithUsernamePassword(t *testing.T) {
 
 	glSource := test.NewGitSource(test.WithURL("https://gitlab.com/gitlab-org/gitlab-qa"))
 
-	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(glSource, git.NewUsernamePassword("", ""))
+	buildEnvStats, err := DetectBuildEnvironmentsWithSecret(logger, glSource, git.NewUsernamePassword("", ""))
 	require.NoError(t, err)
 	printBuildEnvStats(buildEnvStats)
 }

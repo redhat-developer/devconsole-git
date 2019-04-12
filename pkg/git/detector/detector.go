@@ -7,6 +7,7 @@ import (
 	"github.com/redhat-developer/git-service/pkg/git/repository"
 	"github.com/redhat-developer/git-service/pkg/git/repository/bitbucket"
 	"github.com/redhat-developer/git-service/pkg/git/repository/gitlab"
+	"github.com/redhat-developer/git-service/pkg/log"
 	"sync"
 
 	"github.com/redhat-developer/git-service/pkg/git/repository/generic"
@@ -21,18 +22,22 @@ var gitServiceCreators = []repository.ServiceCreator{
 
 // DetectBuildEnvironmentsWithSecret detects build tools and languages using the given secret in the git repository
 // defined by the given v1alpha1.GitSource
-func DetectBuildEnvironmentsWithSecret(gitSource *v1alpha1.GitSource, secret git.Secret) (*v1alpha1.BuildEnvStats, error) {
-	return DetectBuildEnvironments(gitSource, git.NewSecretProvider(secret))
+func DetectBuildEnvironmentsWithSecret(log *log.GitSourceLogger, gitSource *v1alpha1.GitSource, secret git.Secret) (*v1alpha1.BuildEnvStats, error) {
+	return DetectBuildEnvironments(log, gitSource, git.NewSecretProvider(secret))
 }
 
 // DetectBuildEnvironments detects build tools and languages using the secret provided by the SecretProvider
 // in the git repository defined by the given v1alpha1.GitSource
-func DetectBuildEnvironments(gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (*v1alpha1.BuildEnvStats, error) {
-	return detectBuildEnvs(gitSource, secretProvider, gitServiceCreators)
+func DetectBuildEnvironments(log *log.GitSourceLogger, gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (*v1alpha1.BuildEnvStats, error) {
+	return detectBuildEnvs(log, gitSource, secretProvider, gitServiceCreators)
 }
 
-func detectBuildEnvs(gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider, serviceCreators []repository.ServiceCreator) (*v1alpha1.BuildEnvStats, error) {
-	service, err := repository.NewGitService(gitSource, secretProvider, serviceCreators)
+func detectBuildEnvs(log *log.GitSourceLogger,
+	gitSource *v1alpha1.GitSource,
+	secretProvider *git.SecretProvider,
+	serviceCreators []repository.ServiceCreator) (*v1alpha1.BuildEnvStats, error) {
+
+	service, err := repository.NewGitService(log, gitSource, secretProvider, serviceCreators)
 	if err != nil {
 		return nil, err
 	}

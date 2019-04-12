@@ -4,10 +4,10 @@ import (
 	"encoding/base64"
 	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/detector/build"
+	"github.com/redhat-developer/git-service/pkg/log"
 	"io/ioutil"
 	"net/http"
 	"regexp"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sync"
 )
 
@@ -63,12 +63,14 @@ func getFileIfExists(buildToolFile *regexp.Regexp, actualFiles []string) string 
 type checkerUsingHeaderRequests struct {
 	baseURL string
 	secret  git.Secret
+	log     *log.GitSourceLogger
 }
 
-func NewCheckerUsingHeaderRequests(baseURL string, secret git.Secret) FileExistenceChecker {
+func NewCheckerUsingHeaderRequests(log *log.GitSourceLogger, baseURL string, secret git.Secret) FileExistenceChecker {
 	return &checkerUsingHeaderRequests{
 		baseURL: baseURL,
 		secret:  secret,
+		log:     log,
 	}
 }
 
@@ -115,11 +117,11 @@ func (c *checkerUsingHeaderRequests) fileExists(client *http.Client, buildToolFi
 	} else {
 		defer func() {
 			err := resp.Body.Close()
-			logf.Log.Error(err, "error while closing body", "url", url)
+			c.log.Error(err, "error while closing body")
 		}()
 		_, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			logf.Log.Error(err, "error while reading body", "url", url)
+			c.log.Error(err, "error while reading body")
 		}
 		return resp.StatusCode == 200
 	}

@@ -3,12 +3,14 @@ package detector
 import (
 	"github.com/redhat-developer/git-service/pkg/git/detector/build"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
+	"github.com/redhat-developer/git-service/pkg/log"
 	"github.com/redhat-developer/git-service/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/h2non/gock.v1"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 var (
@@ -42,6 +44,7 @@ var (
 	allEnvServices = [][]*test.DummyService{javaServices, javaAndGoServices, rubyServices,
 		nodeJsServices, phpServices, pythonServices, perlServices, dotnetServices}
 )
+var logger = &log.GitSourceLogger{Logger: logf.Log}
 
 func TestDetectJavaMavenAndGradle(t *testing.T) {
 	defer gock.OffAll()
@@ -50,7 +53,7 @@ func TestDetectJavaMavenAndGradle(t *testing.T) {
 		source := test.NewGitSource(test.WithFlavor(service.Flavor))
 
 		// when
-		buildEnvStats, err := detectBuildEnvs(source, nil, allEnvServiceCreators(service.UseFilesChecker))
+		buildEnvStats, err := detectBuildEnvs(logger, source, nil, allEnvServiceCreators(service.UseFilesChecker))
 
 		// then
 		require.NoError(t, err)
@@ -75,7 +78,7 @@ func TestDetectJavaMavenAndGo(t *testing.T) {
 		source := test.NewGitSource(test.WithFlavor(service.Flavor))
 
 		// when
-		buildEnvStats, err := detectBuildEnvs(source, nil, allEnvServiceCreators(service.UseFilesChecker))
+		buildEnvStats, err := detectBuildEnvs(logger, source, nil, allEnvServiceCreators(service.UseFilesChecker))
 
 		// then
 		require.NoError(t, err)
@@ -101,7 +104,7 @@ func TestDetectRuby(t *testing.T) {
 		source := test.NewGitSource(test.WithFlavor(service.Flavor))
 
 		// when
-		buildEnvStats, err := detectBuildEnvs(source, nil, allEnvServiceCreators(service.UseFilesChecker))
+		buildEnvStats, err := detectBuildEnvs(logger, source, nil, allEnvServiceCreators(service.UseFilesChecker))
 
 		// then
 		require.NoError(t, err)
@@ -125,7 +128,7 @@ func TestDetectPHP(t *testing.T) {
 		source := test.NewGitSource(test.WithFlavor(service.Flavor))
 
 		// when
-		buildEnvStats, err := detectBuildEnvs(source, nil, allEnvServiceCreators(service.UseFilesChecker))
+		buildEnvStats, err := detectBuildEnvs(logger, source, nil, allEnvServiceCreators(service.UseFilesChecker))
 
 		// then
 		require.NoError(t, err)
@@ -149,7 +152,7 @@ func TestDetectNodeJS(t *testing.T) {
 		source := test.NewGitSource(test.WithFlavor(service.Flavor))
 
 		// when
-		buildEnvStats, err := detectBuildEnvs(source, nil, allEnvServiceCreators(service.UseFilesChecker))
+		buildEnvStats, err := detectBuildEnvs(logger, source, nil, allEnvServiceCreators(service.UseFilesChecker))
 
 		// then
 		require.NoError(t, err)
@@ -173,7 +176,7 @@ func TestDetectPython(t *testing.T) {
 		source := test.NewGitSource(test.WithFlavor(service.Flavor))
 
 		// when
-		buildEnvStats, err := detectBuildEnvs(source, nil, allEnvServiceCreators(service.UseFilesChecker))
+		buildEnvStats, err := detectBuildEnvs(logger, source, nil, allEnvServiceCreators(service.UseFilesChecker))
 
 		// then
 		require.NoError(t, err)
@@ -197,7 +200,7 @@ func TestDetectPerl(t *testing.T) {
 		source := test.NewGitSource(test.WithFlavor(service.Flavor))
 
 		// when
-		buildEnvStats, err := detectBuildEnvs(source, nil, allEnvServiceCreators(service.UseFilesChecker))
+		buildEnvStats, err := detectBuildEnvs(logger, source, nil, allEnvServiceCreators(service.UseFilesChecker))
 
 		// then
 		require.NoError(t, err)
@@ -221,7 +224,7 @@ func TestDetectDotnet(t *testing.T) {
 		source := test.NewGitSource(test.WithFlavor(service.Flavor))
 
 		// when
-		buildEnvStats, err := detectBuildEnvs(source, nil, allEnvServiceCreators(service.UseFilesChecker))
+		buildEnvStats, err := detectBuildEnvs(logger, source, nil, allEnvServiceCreators(service.UseFilesChecker))
 
 		// then
 		require.NoError(t, err)

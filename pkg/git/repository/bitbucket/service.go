@@ -6,6 +6,7 @@ import (
 	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
+	"github.com/redhat-developer/git-service/pkg/log"
 	gittransport "gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"io/ioutil"
 	"net/http"
@@ -25,7 +26,7 @@ type RepositoryService struct {
 }
 
 func NewRepoServiceIfMatches() repository.ServiceCreator {
-	return func(gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (repository.GitService, error) {
+	return func(log *log.GitSourceLogger, gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (repository.GitService, error) {
 		if secretProvider.SecretType() == git.SshKeyType {
 			return nil, nil
 		}

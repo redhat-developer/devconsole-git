@@ -4,6 +4,7 @@ import (
 	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
+	"github.com/redhat-developer/git-service/pkg/log"
 	gogl "github.com/xanzy/go-gitlab"
 	gittransport "gopkg.in/src-d/go-git.v4/plumbing/transport"
 )
@@ -21,7 +22,7 @@ type RepositoryService struct {
 // NewRepoServiceIfMatches returns function creating Github repository service if either host of the git repo URL is gitlab.com
 // or flavor of the given git source is gitlab then, nil otherwise
 func NewRepoServiceIfMatches() repository.ServiceCreator {
-	return func(gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (repository.GitService, error) {
+	return func(log *log.GitSourceLogger, gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (repository.GitService, error) {
 		if secretProvider.SecretType() == git.SshKeyType {
 			return nil, nil
 		}
