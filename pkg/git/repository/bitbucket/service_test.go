@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository/bitbucket"
+	"github.com/redhat-developer/git-service/pkg/log"
 	"github.com/redhat-developer/git-service/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/h2non/gock.v1"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"testing"
 )
 
@@ -26,6 +28,7 @@ var (
 	usernamePassword = git.NewUsernamePassword("anonymous", "")
 	oauthToken       = git.NewOauthToken([]byte("some-token"))
 	validSecrets     = []git.Secret{usernamePassword, oauthToken, nil}
+	logger           = &log.GitSourceLogger{Logger: logf.Log}
 )
 
 func TestRepositoryServiceForAllValidAuthMethodsSuccessful(t *testing.T) {
@@ -37,13 +40,14 @@ func TestRepositoryServiceForAllValidAuthMethodsSuccessful(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(repoURL))
 
 		// when
-		service, err := bitbucket.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
+		service, err := bitbucket.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)
 
-		filesInRootDir, err := service.GetListOfFilesInRootDir()
+		checker, err := service.FileExistenceChecker()
 		require.NoError(t, err)
+		filesInRootDir := checker.GetListOfFoundFiles()
 		require.Len(t, filesInRootDir, 2)
 		assert.Contains(t, filesInRootDir, "pom.xml")
 		assert.Contains(t, filesInRootDir, "mvnw")
@@ -60,7 +64,7 @@ func TestNewRepoServiceIfMatchesShouldNotMatchWhenGitLabHost(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("gitlab.com/" + repoIdentifier))
 
 	// when
-	service, err := bitbucket.NewRepoServiceIfMatches()(source,
+	service, err := bitbucket.NewRepoServiceIfMatches()(logger, source,
 		git.NewSecretProvider(git.NewOauthToken([]byte("some-token"))))
 
 	// then
@@ -73,7 +77,7 @@ func TestNewRepoServiceIfMatchesShouldMatchWhenFlavorIsBitbucket(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("bitprivatebucket.org/"+repoIdentifier), test.WithFlavor("bitbucket"))
 
 	// when
-	service, err := bitbucket.NewRepoServiceIfMatches()(source,
+	service, err := bitbucket.NewRepoServiceIfMatches()(logger, source,
 		git.NewSecretProvider(git.NewOauthToken([]byte("some-token"))))
 
 	// then
@@ -86,7 +90,7 @@ func TestNewRepoServiceIfMatchesShouldNotFailWhenSsh(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("mjobanek@bitbucket.org:" + repoIdentifier + ".git"))
 
 	// when
-	service, err := bitbucket.NewRepoServiceIfMatches()(source,
+	service, err := bitbucket.NewRepoServiceIfMatches()(logger, source,
 		git.NewSecretProvider(git.NewOauthToken([]byte("some-token"))))
 
 	// then
@@ -107,14 +111,14 @@ func TestRepositoryServiceForWrongBranch(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(repoURL), test.WithRef("dev"))
 
 		// when
-		service, err := bitbucket.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
+		service, err := bitbucket.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)
 
-		filesInRootDir, err := service.GetListOfFilesInRootDir()
+		checker, err := service.FileExistenceChecker()
 		assertErrorIsNotFound(t, err, repoIdentifier, "Commit not found")
-		require.Len(t, filesInRootDir, 0)
+		require.Nil(t, checker)
 
 		languageList, err := service.GetLanguageList()
 		assertErrorIsNotFound(t, err, repoIdentifier, "Commit not found")
@@ -135,14 +139,14 @@ func TestRepositoryServiceForWrongRepo(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(bbHost + "some-non-existing-org/some-repo"))
 
 		// when
-		service, err := bitbucket.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
+		service, err := bitbucket.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)
 
-		filesInRootDir, err := service.GetListOfFilesInRootDir()
+		checker, err := service.FileExistenceChecker()
 		assertErrorIsNotFound(t, err, "some-non-existing-org/some-repo", "Repository some-non-existing-org/some-repo not found")
-		require.Len(t, filesInRootDir, 0)
+		require.Nil(t, checker)
 
 		languageList, err := service.GetLanguageList()
 		assertErrorIsNotFound(t, err, "some-non-existing-org/some-repo", "Repository some-non-existing-org/some-repo not found")
@@ -169,14 +173,14 @@ func TestRepositoryServiceReturningForbidden(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(repoURL))
 
 		// when
-		service, err := bitbucket.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
+		service, err := bitbucket.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)
 
-		filesInRootDir, err := service.GetListOfFilesInRootDir()
+		checker, err := service.FileExistenceChecker()
 		assertErrorIsForbidden(t, err)
-		require.Len(t, filesInRootDir, 0)
+		require.Nil(t, checker)
 
 		languageList, err := service.GetLanguageList()
 		assertErrorIsForbidden(t, err)
@@ -203,14 +207,14 @@ func TestRepositoryServiceReturningTokenExpired(t *testing.T) {
 	source := test.NewGitSource(test.WithURL(repoURL))
 
 	// when
-	service, err := bitbucket.NewRepoServiceIfMatches()(source, git.NewSecretProvider(oauthToken))
+	service, err := bitbucket.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(oauthToken))
 
 	// then
 	require.NoError(t, err)
 
-	filesInRootDir, err := service.GetListOfFilesInRootDir()
+	checker, err := service.FileExistenceChecker()
 	assertErrorIsTokenExp(t, err)
-	require.Len(t, filesInRootDir, 0)
+	require.Nil(t, checker)
 
 	languageList, err := service.GetLanguageList()
 	assertErrorIsTokenExp(t, err)
@@ -235,13 +239,14 @@ func TestRepositoryServiceForPrivateInstance(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(url), test.WithFlavor("bitbucket"))
 
 		// when
-		service, err := bitbucket.NewRepoServiceIfMatches()(source, git.NewSecretProvider(oauthToken))
+		service, err := bitbucket.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(oauthToken))
 
 		// then
 		require.NoError(t, err)
 
-		filesInRootDir, err := service.GetListOfFilesInRootDir()
+		checker, err := service.FileExistenceChecker()
 		require.NoError(t, err)
+		filesInRootDir := checker.GetListOfFoundFiles()
 		require.Len(t, filesInRootDir, 2)
 		assert.Contains(t, filesInRootDir, "pom.xml")
 		assert.Contains(t, filesInRootDir, "mvnw")
@@ -267,13 +272,14 @@ func TestRepositoryServiceWithPaginatedResult(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(repoURL))
 
 		// when
-		service, err := bitbucket.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
+		service, err := bitbucket.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)
 
-		filesInRootDir, err := service.GetListOfFilesInRootDir()
+		checker, err := service.FileExistenceChecker()
 		require.NoError(t, err)
+		filesInRootDir := checker.GetListOfFoundFiles()
 		require.Len(t, filesInRootDir, 3)
 		assert.Contains(t, filesInRootDir, "pom.xml")
 		assert.Contains(t, filesInRootDir, "mvnw")

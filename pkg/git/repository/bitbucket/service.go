@@ -6,6 +6,7 @@ import (
 	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
+	"github.com/redhat-developer/git-service/pkg/log"
 	gittransport "gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"io/ioutil"
 	"net/http"
@@ -25,7 +26,7 @@ type RepositoryService struct {
 }
 
 func NewRepoServiceIfMatches() repository.ServiceCreator {
-	return func(gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (repository.GitService, error) {
+	return func(log *log.GitSourceLogger, gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (repository.GitService, error) {
 		if secretProvider.SecretType() == git.SshKeyType {
 			return nil, nil
 		}
@@ -72,10 +73,14 @@ func getBaseURL(endpoint *gittransport.Endpoint) string {
 	return baseURL
 }
 
-func (s *RepositoryService) GetListOfFilesInRootDir() ([]string, error) {
+func (s *RepositoryService) FileExistenceChecker() (repository.FileExistenceChecker, error) {
 	apiURL := fmt.Sprintf(`%s2.0/repositories/%s/%s/src/%s/?q=type="commit_file"`,
 		s.baseURL, s.repo.Owner, s.repo.Name, s.repo.Branch)
-	return s.doPaginatedCalls(apiURL)
+	files, err := s.doPaginatedCalls(apiURL)
+	if err != nil {
+		return nil, err
+	}
+	return repository.NewCheckerWithFetchedFiles(files), nil
 }
 
 func (s *RepositoryService) doPaginatedCalls(apiURL string) ([]string, error) {

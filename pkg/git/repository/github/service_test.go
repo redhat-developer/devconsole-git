@@ -3,11 +3,14 @@ package github_test
 import (
 	"fmt"
 	"github.com/redhat-developer/git-service/pkg/git"
+	"github.com/redhat-developer/git-service/pkg/git/detector/build"
 	"github.com/redhat-developer/git-service/pkg/git/repository/github"
+	"github.com/redhat-developer/git-service/pkg/log"
 	"github.com/redhat-developer/git-service/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/h2non/gock.v1"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"testing"
 )
 
@@ -22,9 +25,10 @@ const (
 )
 
 var (
-	usernamePassword = git.NewUsernamePassword("anonymous", "")
+	usernamePassword = git.NewUsernamePassword("some-user", "some-password")
 	oauthToken       = git.NewOauthToken([]byte("some-token"))
-	validSecrets     = []git.Secret{usernamePassword, oauthToken, nil}
+	validSecrets     = []git.Secret{usernamePassword, oauthToken}
+	logger           = &log.GitSourceLogger{Logger: logf.Log}
 )
 
 func TestRepositoryServiceForAllValidAuthMethodsSuccessful(t *testing.T) {
@@ -32,17 +36,18 @@ func TestRepositoryServiceForAllValidAuthMethodsSuccessful(t *testing.T) {
 	defer gock.OffAll()
 
 	for _, secret := range validSecrets {
-		test.MockGHCalls(t, repoIdentifier, "master", test.S("pom.xml", "mvnw"), test.S("Java", "Go"))
+		test.MockGHGetApiCalls(t, repoIdentifier, "master", test.S("pom.xml", "mvnw"), test.S("Java", "Go"))
 		source := test.NewGitSource(test.WithURL(repoURL))
 
 		// when
-		service, err := github.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
+		service, err := github.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)
 
-		filesInRootDir, err := service.GetListOfFilesInRootDir()
+		checker, err := service.FileExistenceChecker()
 		require.NoError(t, err)
+		filesInRootDir := checker.GetListOfFoundFiles()
 		require.Len(t, filesInRootDir, 2)
 		assert.Contains(t, filesInRootDir, "pom.xml")
 		assert.Contains(t, filesInRootDir, "mvnw")
@@ -60,7 +65,7 @@ func TestNewRepoServiceIfMatchesShouldNotMatchWhenSshKey(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("git@github.com:" + repoIdentifier))
 
 	// when
-	service, err := github.NewRepoServiceIfMatches()(source,
+	service, err := github.NewRepoServiceIfMatches()(logger, source,
 		git.NewSecretProvider(git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte(""))))
 
 	// then
@@ -73,7 +78,7 @@ func TestNewRepoServiceIfMatchesShouldNotMatchWhenGitLabHost(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("gitlab.com/" + repoIdentifier))
 
 	// when
-	service, err := github.NewRepoServiceIfMatches()(source,
+	service, err := github.NewRepoServiceIfMatches()(logger, source,
 		git.NewSecretProvider(git.NewOauthToken([]byte("some-token"))))
 
 	// then
@@ -86,7 +91,7 @@ func TestNewRepoServiceIfMatchesShouldMatchWhenFlavorIsGitHub(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("gitprivatehub.com/"+repoIdentifier), test.WithFlavor("github"))
 
 	// when
-	service, err := github.NewRepoServiceIfMatches()(source,
+	service, err := github.NewRepoServiceIfMatches()(logger, source,
 		git.NewSecretProvider(git.NewOauthToken([]byte("some-token"))))
 
 	// then
@@ -99,7 +104,7 @@ func TestNewRepoServiceIfMatchesShouldNotFailWhenSsh(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("git@github.com:" + repoIdentifier))
 
 	// when
-	service, err := github.NewRepoServiceIfMatches()(source,
+	service, err := github.NewRepoServiceIfMatches()(logger, source,
 		git.NewSecretProvider(git.NewOauthToken([]byte("some-token"))))
 
 	// then
@@ -116,15 +121,15 @@ func TestRepositoryServiceForWrongRepo(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(repoURL), test.WithRef("dev"))
 
 		// when
-		service, err := github.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
+		service, err := github.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)
 
-		filesInRootDir, err := service.GetListOfFilesInRootDir()
+		checker, err := service.FileExistenceChecker()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "Not Found")
-		require.Len(t, filesInRootDir, 0)
+		assert.Nil(t, checker)
 
 		languageList, err := service.GetLanguageList()
 		require.Error(t, err)
@@ -146,19 +151,51 @@ func TestRepositoryServiceReturningRateLimit(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(repoURL))
 
 		// when
-		service, err := github.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
+		service, err := github.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)
 
-		filesInRootDir, err := service.GetListOfFilesInRootDir()
+		checker, err := service.FileExistenceChecker()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "API rate limit exceeded")
-		require.Len(t, filesInRootDir, 0)
+		require.Nil(t, checker)
 
 		languageList, err := service.GetLanguageList()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "API rate limit exceeded")
+		require.Len(t, languageList, 0)
+	}
+}
+
+func TestRepositoryServiceUsesHeadCallsWhenAnonymousSecretIsUsed(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	for _, secret := range []git.Secret{git.NewUsernamePassword("anonymous", ""), nil} {
+		test.MockGHHeadCalls(repoIdentifier, "dev", test.S("pom.xml"))
+		source := test.NewGitSource(test.WithURL(repoURL), test.WithRef("dev"))
+
+		// when
+		service, err := github.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
+		// then
+		require.NoError(t, err)
+
+		checker, err := service.FileExistenceChecker()
+		require.NoError(t, err)
+		filesInRootDir := checker.GetListOfFoundFiles()
+		assert.Len(t, filesInRootDir, 0)
+
+		// and when
+		var files []string
+		for _, tool := range build.Tools {
+			files = append(files, checker.DetectFiles(tool)...)
+		}
+		assert.Len(t, files, 1)
+		assert.Contains(t, files, "pom.xml")
+
+		languageList, err := service.GetLanguageList()
+		require.NoError(t, err)
 		require.Len(t, languageList, 0)
 	}
 }

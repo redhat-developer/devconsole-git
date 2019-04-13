@@ -2,10 +2,12 @@ package github
 
 import (
 	"context"
+	"fmt"
 	gogh "github.com/google/go-github/github"
 	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
+	"github.com/redhat-developer/git-service/pkg/log"
 	gittransport "gopkg.in/src-d/go-git.v4/plumbing/transport"
 )
 
@@ -14,17 +16,21 @@ const (
 	githubFlavor = "github"
 )
 
+var anonymousSecret = git.NewUsernamePassword("anonymous", "")
+
 type RepositoryService struct {
 	gitSource *v1alpha1.GitSource
 	client    *gogh.Client
 	repo      repository.StructuredIdentifier
 	filenames []string
+	secret    git.Secret
+	log       *log.GitSourceLogger
 }
 
 // NewRepoServiceIfMatches returns function creating Github repository service if either host of the git repo URL is github.com
 // or flavor of the given git source is github then, nil otherwise
 func NewRepoServiceIfMatches() repository.ServiceCreator {
-	return func(gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (repository.GitService, error) {
+	return func(log *log.GitSourceLogger, gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (repository.GitService, error) {
 		if secretProvider.SecretType() == git.SshKeyType {
 			return nil, nil
 		}
@@ -33,14 +39,14 @@ func NewRepoServiceIfMatches() repository.ServiceCreator {
 			return nil, err
 		}
 		if endpoint.Host == githubHost || gitSource.Spec.Flavor == githubFlavor {
-			secret := secretProvider.GetSecret(git.NewUsernamePassword("anonymous", ""))
-			return newGhService(gitSource, endpoint, secret)
+			secret := secretProvider.GetSecret(anonymousSecret)
+			return newGhService(log, gitSource, endpoint, secret)
 		}
 		return nil, nil
 	}
 }
 
-func newGhService(gitSource *v1alpha1.GitSource, endpoint *gittransport.Endpoint, secret git.Secret) (*RepositoryService, error) {
+func newGhService(log *log.GitSourceLogger, gitSource *v1alpha1.GitSource, endpoint *gittransport.Endpoint, secret git.Secret) (*RepositoryService, error) {
 	repo, err := repository.NewStructuredIdentifier(gitSource, endpoint)
 	if err != nil {
 		return nil, err
@@ -56,10 +62,17 @@ func newGhService(gitSource *v1alpha1.GitSource, endpoint *gittransport.Endpoint
 		gitSource: gitSource,
 		client:    client,
 		repo:      repo,
+		secret:    secret,
+		log:       log,
 	}, nil
 }
 
-func (s *RepositoryService) GetListOfFilesInRootDir() ([]string, error) {
+func (s *RepositoryService) FileExistenceChecker() (repository.FileExistenceChecker, error) {
+	if isAnonymousSecret(s.secret) {
+		baseURL := fmt.Sprintf("https://github.com/%s/%s/blob/%s/", s.repo.Owner, s.repo.Name, s.repo.Branch)
+		return repository.NewCheckerUsingHeaderRequests(s.log, baseURL, s.secret), nil
+	}
+
 	tree, _, err := s.client.Git.GetTree(
 		context.Background(),
 		s.repo.Owner,
@@ -73,10 +86,14 @@ func (s *RepositoryService) GetListOfFilesInRootDir() ([]string, error) {
 	for _, entry := range tree.Entries {
 		filenames = append(filenames, *entry.Path)
 	}
-	return filenames, nil
+	return repository.NewCheckerWithFetchedFiles(filenames), nil
 }
 
 func (s *RepositoryService) GetLanguageList() ([]string, error) {
+	if isAnonymousSecret(s.secret) {
+		return []string{}, nil
+	}
+
 	languages, _, err := s.client.Repositories.ListLanguages(
 		context.Background(),
 		s.repo.Owner,
@@ -87,4 +104,9 @@ func (s *RepositoryService) GetLanguageList() ([]string, error) {
 	}
 
 	return git.SortLanguagesWithInts(languages), nil
+}
+
+func isAnonymousSecret(secret git.Secret) bool {
+	return secret.SecretType() == git.UsernamePasswordType &&
+		secret.SecretContent() == anonymousSecret.SecretContent()
 }

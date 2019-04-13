@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository/gitlab"
+	"github.com/redhat-developer/git-service/pkg/log"
 	"github.com/redhat-developer/git-service/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,6 +14,7 @@ import (
 	"golang.org/x/oauth2"
 	"gopkg.in/h2non/gock.v1"
 	"math/rand"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"strings"
 	"testing"
 )
@@ -29,6 +31,7 @@ var (
 	usernamePassword = git.NewUsernamePassword("anonymous", "")
 	oauthToken       = git.NewOauthToken([]byte("some-token"))
 	validSecrets     = []git.Secret{usernamePassword, oauthToken, nil}
+	logger           = &log.GitSourceLogger{Logger: logf.Log}
 )
 
 func TestRepositoryServiceForAllValidAuthMethodsSuccessful(t *testing.T) {
@@ -43,13 +46,14 @@ func TestRepositoryServiceForAllValidAuthMethodsSuccessful(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(repoURL))
 
 		// when
-		service, err := gitlab.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
+		service, err := gitlab.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)
 
-		filesInRootDir, err := service.GetListOfFilesInRootDir()
+		checker, err := service.FileExistenceChecker()
 		require.NoError(t, err)
+		filesInRootDir := checker.GetListOfFoundFiles()
 		require.Len(t, filesInRootDir, 2)
 		assert.Contains(t, filesInRootDir, "pom.xml")
 		assert.Contains(t, filesInRootDir, "mvnw")
@@ -67,7 +71,7 @@ func TestNewRepoServiceIfMatchesShouldNotMatchWhenSshKey(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("git@gitlab.com:" + repoIdentifier))
 
 	// when
-	service, err := gitlab.NewRepoServiceIfMatches()(source,
+	service, err := gitlab.NewRepoServiceIfMatches()(logger, source,
 		git.NewSecretProvider(git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte(""))))
 
 	// then
@@ -80,7 +84,7 @@ func TestNewRepoServiceIfMatchesShouldNotMatchWhenGitLabHost(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("gitlab.com/" + repoIdentifier))
 
 	// when
-	service, err := gitlab.NewRepoServiceIfMatches()(source,
+	service, err := gitlab.NewRepoServiceIfMatches()(logger, source,
 		git.NewSecretProvider(git.NewOauthToken([]byte("some-token"))))
 
 	// then
@@ -93,7 +97,7 @@ func TestNewRepoServiceIfMatchesShouldMatchWhenFlavorIsGitHub(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("gitprivatelab.com/"+repoIdentifier), test.WithFlavor("gitlab"))
 
 	// when
-	service, err := gitlab.NewRepoServiceIfMatches()(source,
+	service, err := gitlab.NewRepoServiceIfMatches()(logger, source,
 		git.NewSecretProvider(git.NewOauthToken([]byte("some-token"))))
 
 	// then
@@ -106,7 +110,7 @@ func TestNewRepoServiceIfMatchesShouldNotFailWhenSsh(t *testing.T) {
 	source := test.NewGitSource(test.WithURL("git@gitlab.com:" + repoIdentifier))
 
 	// when
-	service, err := gitlab.NewRepoServiceIfMatches()(source,
+	service, err := gitlab.NewRepoServiceIfMatches()(logger, source,
 		git.NewSecretProvider(git.NewOauthToken([]byte("some-token"))))
 
 	// then
@@ -128,15 +132,15 @@ func TestRepositoryServiceForWrongRepo(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(repoURL), test.WithRef("dev"))
 
 		// when
-		service, err := gitlab.NewRepoServiceIfMatches()(source, git.NewSecretProvider(secret))
+		service, err := gitlab.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
 
 		// then
 		require.NoError(t, err)
 
-		filesInRootDir, err := service.GetListOfFilesInRootDir()
+		checker, err := service.FileExistenceChecker()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "Not Found")
-		require.Len(t, filesInRootDir, 0)
+		require.Nil(t, checker)
 
 		languageList, err := service.GetLanguageList()
 		require.Error(t, err)
@@ -158,13 +162,14 @@ func TestRepositoryServiceForPrivateInstance(t *testing.T) {
 		source := test.NewGitSource(test.WithURL(url), test.WithFlavor("gitlab"))
 
 		// when
-		service, err := gitlab.NewRepoServiceIfMatches()(source, git.NewSecretProvider(oauthToken))
+		service, err := gitlab.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(oauthToken))
 
 		// then
 		require.NoError(t, err)
 
-		filesInRootDir, err := service.GetListOfFilesInRootDir()
+		checker, err := service.FileExistenceChecker()
 		require.NoError(t, err)
+		filesInRootDir := checker.GetListOfFoundFiles()
 		require.Len(t, filesInRootDir, 2)
 		assert.Contains(t, filesInRootDir, "pom.xml")
 		assert.Contains(t, filesInRootDir, "mvnw")

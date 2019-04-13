@@ -4,6 +4,7 @@ import (
 	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 	"github.com/redhat-developer/git-service/pkg/git"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
+	"github.com/redhat-developer/git-service/pkg/log"
 	gogl "github.com/xanzy/go-gitlab"
 	gittransport "gopkg.in/src-d/go-git.v4/plumbing/transport"
 )
@@ -21,7 +22,7 @@ type RepositoryService struct {
 // NewRepoServiceIfMatches returns function creating Github repository service if either host of the git repo URL is gitlab.com
 // or flavor of the given git source is gitlab then, nil otherwise
 func NewRepoServiceIfMatches() repository.ServiceCreator {
-	return func(gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (repository.GitService, error) {
+	return func(log *log.GitSourceLogger, gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (repository.GitService, error) {
 		if secretProvider.SecretType() == git.SshKeyType {
 			return nil, nil
 		}
@@ -68,7 +69,7 @@ func getBaseUrl(endpoint *gittransport.Endpoint) string {
 	return endpoint.String()[:len(endpoint.String())-len(endpoint.Path)]
 }
 
-func (s *RepositoryService) GetListOfFilesInRootDir() ([]string, error) {
+func (s *RepositoryService) FileExistenceChecker() (repository.FileExistenceChecker, error) {
 	tree, _, err := s.client.Repositories.ListTree(
 		s.repo.OwnerWithName(),
 		&gogl.ListTreeOptions{
@@ -81,7 +82,7 @@ func (s *RepositoryService) GetListOfFilesInRootDir() ([]string, error) {
 	for _, entry := range tree {
 		filenames = append(filenames, entry.Path)
 	}
-	return filenames, nil
+	return repository.NewCheckerWithFetchedFiles(filenames), nil
 }
 
 func (s *RepositoryService) GetLanguageList() ([]string, error) {

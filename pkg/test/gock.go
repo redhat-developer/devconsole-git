@@ -17,7 +17,18 @@ const gitHubNotFound = `{
   "documentation_url": "https://developer.github.com/v3/...."
 }`
 
-func MockGHCalls(t *testing.T, prjPath, branch string, files, langs SliceOfStrings, modifiers ...GockModifier) {
+func MockGHHeadCalls(prjPath, branch string, files SliceOfStrings, modifiers ...GockModifier) {
+	for _, file := range files() {
+		mock := gock.New(host).
+			Head(fmt.Sprintf("/%s/blob/%s/%s", prjPath, branch, file))
+		for _, modify := range modifiers {
+			modify(mock)
+		}
+		mock.Reply(200)
+	}
+}
+
+func MockGHGetApiCalls(t *testing.T, prjPath, branch string, files, langs SliceOfStrings, modifiers ...GockModifier) {
 	var entries []gogh.TreeEntry
 	for _, file := range files() {
 		entries = append(entries, gogh.TreeEntry{
@@ -34,13 +45,7 @@ func MockGHCalls(t *testing.T, prjPath, branch string, files, langs SliceOfStrin
 	bytes, err := json.Marshal(tree)
 	require.NoError(t, err)
 
-	treeMock := gock.New("https://api.github.com").
-		Get(fmt.Sprintf("/repos/%s/git/trees/%s", prjPath, branch))
-	for _, modify := range modifiers {
-		modify(treeMock)
-	}
-	treeMock.Reply(200).
-		BodyString(string(bytes))
+	newApiMock(fmt.Sprintf("/repos/%s/git/trees/%s", prjPath, branch), bytes, modifiers...)
 
 	languages := map[string]int{}
 	for _, lang := range langs() {
@@ -50,12 +55,16 @@ func MockGHCalls(t *testing.T, prjPath, branch string, files, langs SliceOfStrin
 	bytes, err = json.Marshal(languages)
 	require.NoError(t, err)
 
-	langMock := gock.New("https://api.github.com").
-		Get(fmt.Sprintf("/repos/%s/languages", prjPath))
+	newApiMock(fmt.Sprintf("/repos/%s/languages", prjPath), bytes, modifiers...)
+}
+
+func newApiMock(path string, bytes []byte, modifiers ...GockModifier) {
+	treeMock := gock.New("https://api.github.com").
+		Get(path)
 	for _, modify := range modifiers {
-		modify(langMock)
+		modify(treeMock)
 	}
-	langMock.Reply(200).
+	treeMock.Reply(200).
 		BodyString(string(bytes))
 }
 

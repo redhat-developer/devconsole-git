@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
-	"github.com/redhat-developer/git-service/pkg/git/detector"
+	"github.com/redhat-developer/git-service/pkg/git/detector/build"
 	"github.com/redhat-developer/git-service/pkg/git/repository"
 	"github.com/redhat-developer/git-service/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -30,8 +30,7 @@ func TestReconcileGitSourceAnalysisFromGitHubWithDefaultCredentials(t *testing.T
 	gsa := test.NewGitSourceAnalysis(test.GitSourceName)
 	reconciler, request, client := PrepareClient(test.GitSourceAnalysisName,
 		test.RegisterGvkObject(v1alpha1.SchemeGroupVersion, gs, gsa))
-	langs := test.S("Java", "Go")
-	test.MockGHCalls(t, repoIdentifier, "master", test.S("pom.xml", "mvnw"), langs, matchBasicAuth("anonymous:"))
+	test.MockGHHeadCalls(repoIdentifier, "master", test.S("pom.xml", "mvnw"), matchBasicAuth("anonymous:"))
 
 	//when
 	_, err := reconciler.Reconcile(request)
@@ -39,7 +38,7 @@ func TestReconcileGitSourceAnalysisFromGitHubWithDefaultCredentials(t *testing.T
 	//then
 	require.NoError(t, err)
 
-	assertGitSourceAnalysis(t, client, "", langs, buildType(detector.Maven, "pom.xml"))
+	assertGitSourceAnalysis(t, client, "", test.S(), buildType(build.Maven, "pom.xml"))
 }
 
 func TestReconcileGitSourceAnalysisFromGitHubWithGivenBasicCredentials(t *testing.T) {
@@ -57,7 +56,7 @@ func TestReconcileGitSourceAnalysisFromGitHubWithGivenBasicCredentials(t *testin
 			test.RegisterGvkObject(v1alpha1.SchemeGroupVersion, gs, gsa),
 			test.RegisterGvkObject(corev1.SchemeGroupVersion, secret))
 		langs := test.S("Ruby", "Java", "Go")
-		test.MockGHCalls(t, repoIdentifier, "master", test.S("pom.xml", "main.go"), langs,
+		test.MockGHGetApiCalls(t, repoIdentifier, "master", test.S("pom.xml", "main.go"), langs,
 			matchBasicAuth("username:password"))
 
 		//when
@@ -66,7 +65,7 @@ func TestReconcileGitSourceAnalysisFromGitHubWithGivenBasicCredentials(t *testin
 		//then
 		require.NoError(t, err)
 		assertGitSourceAnalysis(t, client, "", langs,
-			buildType(detector.Maven, "pom.xml"), buildType(detector.Golang, "main.go"))
+			buildType(build.Maven, "pom.xml"), buildType(build.Golang, "main.go"))
 	}
 }
 
@@ -85,7 +84,7 @@ func TestReconcileGitSourceAnalysisFromGitHubWithWrongURL(t *testing.T) {
 
 	//then
 	require.NoError(t, err)
-	assertGitSourceAnalysis(t, client, "404 Not Found", nil)
+	assertGitSourceAnalysis(t, client, "", nil)
 }
 
 func TestReconcileGitSourceAnalysisFromGitHubWithWrongSecret(t *testing.T) {
@@ -157,7 +156,7 @@ func TestReconcileGitSourceAnalysisFromGitHubWithGivenToken(t *testing.T) {
 			test.RegisterGvkObject(v1alpha1.SchemeGroupVersion, gs, gsa),
 			test.RegisterGvkObject(corev1.SchemeGroupVersion, secret))
 		langs := test.S("Ruby")
-		test.MockGHCalls(t, repoIdentifier, "master", test.S("Gemfile", "any"), langs,
+		test.MockGHGetApiCalls(t, repoIdentifier, "master", test.S("Gemfile", "any"), langs,
 			matchToken("some-token"))
 
 		//when
@@ -165,7 +164,7 @@ func TestReconcileGitSourceAnalysisFromGitHubWithGivenToken(t *testing.T) {
 
 		//then
 		require.NoError(t, err)
-		assertGitSourceAnalysis(t, client, "", langs, buildType(detector.Ruby, "Gemfile"))
+		assertGitSourceAnalysis(t, client, "", langs, buildType(build.Ruby, "Gemfile"))
 	}
 }
 
@@ -195,7 +194,7 @@ func TestReconcileGitSourceAnalysisFromLocalRepoWithSshKey(t *testing.T) {
 
 		//then
 		require.NoError(t, err)
-		assertGitSourceAnalysis(t, client, "", test.S("Java", "Go", "XML"), buildType(detector.Maven, "pom.xml"))
+		assertGitSourceAnalysis(t, client, "", test.S("Java", "Go", "XML"), buildType(build.Maven, "pom.xml"))
 	}
 }
 
@@ -226,7 +225,7 @@ func TestReconcileGitSourceAnalysisFromLocalRepoWithSshKeyWithPassphrase(t *test
 
 		//then
 		require.NoError(t, err)
-		assertGitSourceAnalysis(t, client, "", test.S("Java", "Go", "XML"), buildType(detector.Maven, "pom.xml"))
+		assertGitSourceAnalysis(t, client, "", test.S("Java", "Go", "XML"), buildType(build.Maven, "pom.xml"))
 	}
 }
 
@@ -258,10 +257,10 @@ func assertGitSourceAnalysis(t *testing.T, client client.Client, errorMsg string
 	}
 }
 
-type typeWithFiles func() (detector.BuildTool, []string)
+type typeWithFiles func() (build.Tool, []string)
 
-func buildType(tool detector.BuildTool, files ...string) typeWithFiles {
-	return func() (detector.BuildTool, []string) {
+func buildType(tool build.Tool, files ...string) typeWithFiles {
+	return func() (build.Tool, []string) {
 		return tool, files
 	}
 }
