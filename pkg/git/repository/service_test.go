@@ -1,9 +1,9 @@
 package repository_test
 
 import (
-	"github.com/redhat-developer/git-service/pkg/git/repository"
-	"github.com/redhat-developer/git-service/pkg/log"
-	"github.com/redhat-developer/git-service/pkg/test"
+	"github.com/redhat-developer/devconsole-git/pkg/git/repository"
+	"github.com/redhat-developer/devconsole-git/pkg/log"
+	"github.com/redhat-developer/devconsole-git/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"

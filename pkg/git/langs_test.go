@@ -1,7 +1,7 @@
 package git_test
 
 import (
-	"github.com/redhat-developer/git-service/pkg/git"
+	"github.com/redhat-developer/devconsole-git/pkg/git"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"

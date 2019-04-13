@@ -1,8 +1,8 @@
 package repository_test
 
 import (
-	"github.com/redhat-developer/git-service/pkg/git/repository"
-	"github.com/redhat-developer/git-service/pkg/test"
+	"github.com/redhat-developer/devconsole-git/pkg/git/repository"
+	"github.com/redhat-developer/devconsole-git/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	gittransport "gopkg.in/src-d/go-git.v4/plumbing/transport"

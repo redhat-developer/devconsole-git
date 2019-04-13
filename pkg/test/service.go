@@ -3,9 +3,9 @@ package test
 import (
 	"fmt"
 	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
-	"github.com/redhat-developer/git-service/pkg/git"
-	"github.com/redhat-developer/git-service/pkg/git/repository"
-	"github.com/redhat-developer/git-service/pkg/log"
+	"github.com/redhat-developer/devconsole-git/pkg/git"
+	"github.com/redhat-developer/devconsole-git/pkg/git/repository"
+	"github.com/redhat-developer/devconsole-git/pkg/log"
 	"gopkg.in/h2non/gock.v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )

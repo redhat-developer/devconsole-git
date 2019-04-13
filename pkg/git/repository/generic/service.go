@@ -3,13 +3,13 @@ package generic
 import (
 	"fmt"
 	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
-	"github.com/redhat-developer/git-service/pkg/git/repository"
+	"github.com/redhat-developer/devconsole-git/pkg/git/repository"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport"
 	"gopkg.in/src-d/go-git.v4/storage"
 	"strings"
 	"sync"
 
-	"github.com/redhat-developer/git-service/pkg/git"
+	"github.com/redhat-developer/devconsole-git/pkg/git"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/src-d/enry.v1"
 	"gopkg.in/src-d/go-billy.v4/memfs"
