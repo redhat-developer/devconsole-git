@@ -1,4 +1,4 @@
-# git-service
+# devconsole-git
 This service provides functionality for communications with git providers in DevConsole
 
 ### Pre-requisites

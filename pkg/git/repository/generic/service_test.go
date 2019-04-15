@@ -1,10 +1,10 @@
 package generic_test
 
 import (
-	"github.com/redhat-developer/git-service/pkg/git"
-	"github.com/redhat-developer/git-service/pkg/git/repository"
-	"github.com/redhat-developer/git-service/pkg/git/repository/generic"
-	"github.com/redhat-developer/git-service/pkg/test"
+	"github.com/redhat-developer/devconsole-git/pkg/git"
+	"github.com/redhat-developer/devconsole-git/pkg/git/repository"
+	"github.com/redhat-developer/devconsole-git/pkg/git/repository/generic"
+	"github.com/redhat-developer/devconsole-git/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"

@@ -3,9 +3,9 @@ package gitsourceanalysis
 import (
 	"context"
 	"github.com/go-logr/logr"
-	"github.com/redhat-developer/git-service/pkg/git"
-	"github.com/redhat-developer/git-service/pkg/git/detector"
-	"github.com/redhat-developer/git-service/pkg/log"
+	"github.com/redhat-developer/devconsole-git/pkg/git"
+	"github.com/redhat-developer/devconsole-git/pkg/git/detector"
+	"github.com/redhat-developer/devconsole-git/pkg/log"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"

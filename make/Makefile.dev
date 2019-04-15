@@ -1,7 +1,7 @@
 DOCKER_REGISTRY?=quay.io
 DOCKER_REPOSITORY?=openshiftio
 DOCKER_REPO?=$(DOCKER_REGISTRY)/$(DOCKER_REPOSITORY)
-IMAGE_NAME?=git-service
+IMAGE_NAME?=devconsole-git
 SHORT_COMMIT=$(shell git rev-parse --short HEAD)
 ifneq ($(GITUNTRACKEDCHANGES),)
 SHORT_COMMIT := $(SHORT_COMMIT)-dirty

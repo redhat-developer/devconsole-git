@@ -11,7 +11,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/redhat-developer/devconsole-api/pkg/apis"
-	"github.com/redhat-developer/git-service/pkg/controller"
+	"github.com/redhat-developer/devconsole-git/pkg/controller"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"

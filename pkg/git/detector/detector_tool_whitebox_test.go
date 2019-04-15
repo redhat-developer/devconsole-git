@@ -1,10 +1,10 @@
 package detector
 
 import (
-	"github.com/redhat-developer/git-service/pkg/git/detector/build"
-	"github.com/redhat-developer/git-service/pkg/git/repository"
-	"github.com/redhat-developer/git-service/pkg/log"
-	"github.com/redhat-developer/git-service/pkg/test"
+	"github.com/redhat-developer/devconsole-git/pkg/git/detector/build"
+	"github.com/redhat-developer/devconsole-git/pkg/git/repository"
+	"github.com/redhat-developer/devconsole-git/pkg/log"
+	"github.com/redhat-developer/devconsole-git/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/h2non/gock.v1"
 	"testing"

@@ -2,11 +2,11 @@ package github_test
 
 import (
 	"fmt"
-	"github.com/redhat-developer/git-service/pkg/git"
-	"github.com/redhat-developer/git-service/pkg/git/detector/build"
-	"github.com/redhat-developer/git-service/pkg/git/repository/github"
-	"github.com/redhat-developer/git-service/pkg/log"
-	"github.com/redhat-developer/git-service/pkg/test"
+	"github.com/redhat-developer/devconsole-git/pkg/git"
+	"github.com/redhat-developer/devconsole-git/pkg/git/detector/build"
+	"github.com/redhat-developer/devconsole-git/pkg/git/repository/github"
+	"github.com/redhat-developer/devconsole-git/pkg/log"
+	"github.com/redhat-developer/devconsole-git/pkg/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/h2non/gock.v1"

@@ -45,14 +45,14 @@ Make sure that you have minishift running. you can check it using `minishift sta
 
 After successfully starting minishift, configure your shell to use docker daemon from minishift using `eval $(minishift docker-env)`.
 
-Now it's time to run `git-service` and it's required resources from `deploy/resources` on OpenShift use following command:
+Now it's time to run `devconsole-git` and it's required resources from `deploy/resources` on OpenShift use following command:
 ```
 make deploy-all
 ```
 
 This build uses the `system:admin` account for creating all required resources from `deploy/resources` directory.
 
-The above command then create deployment for git-service on Openshift.
+The above command then create deployment for devconsole-git on Openshift.
 
 #### Start Minishift
 We have make target defined to start minishift with required cpu's and configuration.

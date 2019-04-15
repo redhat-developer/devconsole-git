@@ -1,4 +1,4 @@
-PROJECT_NAME=git-service
+PROJECT_NAME=devconsole-git
 PACKAGE_NAME:=github.com/redhat-developer/$(PROJECT_NAME)
 CUR_DIR=$(shell pwd)
 TMP_PATH=$(CUR_DIR)/tmp
@@ -8,7 +8,7 @@ INCLUDE_DIR=make
 SOURCE_DIR ?= .
 SOURCES := $(shell find $(SOURCE_DIR) -path $(SOURCE_DIR)/vendor -prune -o -name '*.go' -print)
 
-BINARY_SERVER_BIN=$(INSTALL_PREFIX)/git-service
+BINARY_SERVER_BIN=$(INSTALL_PREFIX)/devconsole-git
 GO_BIN_NAME=go
 GIT_BIN_NAME=git
 DEP_BIN_NAME=dep

@@ -2,9 +2,9 @@ package repository
 
 import (
 	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
-	"github.com/redhat-developer/git-service/pkg/git"
-	"github.com/redhat-developer/git-service/pkg/git/detector/build"
-	"github.com/redhat-developer/git-service/pkg/log"
+	"github.com/redhat-developer/devconsole-git/pkg/git"
+	"github.com/redhat-developer/devconsole-git/pkg/git/detector/build"
+	"github.com/redhat-developer/devconsole-git/pkg/log"
 )
 
 type GitService interface {
