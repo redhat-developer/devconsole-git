@@ -17,6 +17,9 @@ const (
 )
 
 func IsReachableWithBranch(log *log.GitSourceLogger, branch string, endpoint *gittransport.Endpoint) (bool, error) {
+	if endpoint.Host == "" {
+		return false, fmt.Errorf(unableReachRepoError)
+	}
 	client := &http.Client{}
 	path := endpoint.Path
 	if !strings.HasSuffix(path, ".git") {
@@ -27,7 +30,7 @@ func IsReachableWithBranch(log *log.GitSourceLogger, branch string, endpoint *gi
 	}
 	url := fmt.Sprintf("https://%s%s/info/refs?service=git-upload-pack", endpoint.Host, path)
 	resp, err := client.Get(url)
-	if err != nil || endpoint.Host == "" || endpoint.Path == "" {
+	if err != nil {
 		return false, fmt.Errorf(unableReachRepoError)
 	} else {
 		return validateBranch(log, branch, resp)
