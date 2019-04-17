@@ -94,8 +94,8 @@ GOANALYSIS_DIRS=$(shell go list -f {{.Dir}} ./... | grep -v -E $(GOANALYSIS_PKGS
 #-------------------------------------------------------------------------------
 
 .PHONY: test-all
-## Runs the unit tests and e2e tests
-test-all: prebuild-check test-unit test-e2e
+## Runs the unit tests
+test-all: prebuild-check test-unit 
 
 # Runs the unit tests and produces coverage files for each package.
 .PHONY: test-unit-with-coverage
@@ -108,20 +108,6 @@ test-unit: prebuild-check $(SOURCES)
 	$(eval TEST_PACKAGES:=$(shell go list ./... | grep -v $(ALL_PKGS_EXCLUDE_PATTERN)))
 	ADMIN_LOG_LEVEL=$(ADMIN_LOG_LEVEL) go test -vet off -p 1 $(GO_TEST_VERBOSITY_FLAG) $(TEST_PACKAGES)
 
-.PHONY: test-e2e
-## Runs the e2e tests without coverage
-test-e2e: build build-image e2e-setup
-	$(call log-info,"Running E2E test: $@")
-	go test ./test/e2e/... -root=$(PWD) -kubeconfig=$(HOME)/.kube/config -globalMan deploy/test/global-manifests.yaml -namespacedMan deploy/test/namespace-manifests.yaml -v -parallel=1 -singleNamespace
-
-.PHONY: e2e-setup
-e2e-setup:  e2e-cleanup
-	oc new-project devconsole-e2e-test || true
-
-.PHONY: e2e-cleanup
-e2e-cleanup:
-	oc login -u system:admin
-	oc delete project devconsole-e2e-test || true
 
 #-------------------------------------------------------------------------------
 # Inspect coverage of unit tests, integration tests in either pure

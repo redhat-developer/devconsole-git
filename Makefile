@@ -21,10 +21,8 @@ GOCYCLO_BIN=$(GOCYCLO_DIR)/gocyclo
 
 # declares variable that are OS-sensitive
 include ./$(INCLUDE_DIR)/test.mk
-include ./$(INCLUDE_DIR)/Makefile.dev
 
 DOCKER_BIN := $(shell command -v $(DOCKER_BIN_NAME) 2> /dev/null)
-include ./$(INCLUDE_DIR)/docker.mk
 
 # This is a fix for a non-existing user in passwd file when running in a docker
 # container and trying to clone repos of dependencies
@@ -46,35 +44,6 @@ BUILD_TIME=`date -u '+%Y-%m-%dT%H:%M:%SZ'`
 define log-info =
 	@echo "INFO: $(1)"
 endef
-
-# -------------------------------------------------------------------
-# Docker build
-# -------------------------------------------------------------------
-BUILD_DIR = bin
-REGISTRY_URI = quay.io
-REGISTRY_NS = ${PROJECT_NAME}
-REGISTRY_IMAGE = ${PROJECT_NAME}
-
-ifeq ($(TARGET),rhel)
-	REGISTRY_URL := ${REGISTRY_URI}/openshiftio/rhel-${REGISTRY_NS}-${REGISTRY_IMAGE}
-	DOCKERFILE := Dockerfile.rhel
-else
-	REGISTRY_URL := ${REGISTRY_URI}/openshiftio/${REGISTRY_NS}-${REGISTRY_IMAGE}
-	DOCKERFILE := Dockerfile
-endif
-
-$(BUILD_DIR):
-	mkdir $(BUILD_DIR)
-
-.PHONY: build-linux $(BUILD_DIR)
-build-linux: makefiles prebuild-check deps ## Builds the Linux binary for the container image into bin/ folder
-	CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -v $(LDFLAGS) -o $(BUILD_DIR)/$(PROJECT_NAME)
-
-image: clean-artifacts build-linux
-	docker build -t $(REGISTRY_URL) \
-	  --build-arg BUILD_DIR=$(BUILD_DIR)\
-	  --build-arg PROJECT_NAME=$(PROJECT_NAME)\
-	  -f $(VENDOR_DIR)/github.com/fabric8-services/fabric8-common/makefile/$(DOCKERFILE) .
 
 # -------------------------------------------------------------------
 # help!
@@ -104,6 +73,7 @@ help:/
 	    lastLine = $$0 \
           } \
         }' $(MAKEFILE_LIST)
+		
 # -------------------------------------------------------------------
 # required tools
 # -------------------------------------------------------------------
@@ -234,5 +204,5 @@ clean: $(CLEAN_TARGETS)
 .PHONY: build
 ## Build git service
 build: prebuild-check deps check-go-format
-	@echo "building $(BINARY_SERVER_BIN)..."
-	go build -v -o $(BINARY_SERVER_BIN) cmd/manager/main.go
+	@echo "Compiling packages"
+	go build -v ./...
