@@ -169,6 +169,31 @@ func TestReconcileGitSourceAnalysisFromGitHubWithGivenToken(t *testing.T) {
 	}
 }
 
+func TestReconcileGitSourceAnalysisFromCustomGit(t *testing.T) {
+	//given
+	defer gock.OffAll()
+	token := test.NewSecret(corev1.SecretTypeOpaque, map[string][]byte{"password": []byte("some-token")})
+	basic := test.NewSecret(corev1.SecretTypeOpaque, map[string][]byte{
+		"username": []byte("username"),
+		"password": []byte("password")})
+	for _, secret := range []*corev1.Secret{token, basic} {
+
+		gs := test.NewGitSource(test.WithURL("https://my.git.com/owner/name"))
+		gs.Spec.SecretRef = &v1alpha1.SecretRef{Name: test.SecretName}
+		gsa := test.NewGitSourceAnalysis(test.GitSourceName)
+		reconciler, request, client := PrepareClient(test.GitSourceAnalysisName,
+			test.RegisterGvkObject(v1alpha1.SchemeGroupVersion, gs, gsa),
+			test.RegisterGvkObject(corev1.SchemeGroupVersion, secret))
+
+		//when
+		_, err := reconciler.Reconcile(request)
+
+		//then
+		require.NoError(t, err)
+		assertGitSourceAnalysis(t, client, "", test.S())
+	}
+}
+
 func TestReconcileGitSourceAnalysisFromLocalRepoWithSshKey(t *testing.T) {
 	//given
 	defer gock.OffAll()
@@ -195,7 +220,7 @@ func TestReconcileGitSourceAnalysisFromLocalRepoWithSshKey(t *testing.T) {
 
 		//then
 		require.NoError(t, err)
-		assertGitSourceAnalysis(t, client, "", test.S("Java", "Go", "XML"), buildType(build.Maven, "pom.xml"))
+		assertGitSourceAnalysis(t, client, "", test.S())
 	}
 }
 
@@ -226,7 +251,7 @@ func TestReconcileGitSourceAnalysisFromLocalRepoWithSshKeyWithPassphrase(t *test
 
 		//then
 		require.NoError(t, err)
-		assertGitSourceAnalysis(t, client, "", test.S("Java", "Go", "XML"), buildType(build.Maven, "pom.xml"))
+		assertGitSourceAnalysis(t, client, "", test.S())
 	}
 }
 

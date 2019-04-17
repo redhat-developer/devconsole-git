@@ -10,7 +10,6 @@ import (
 	"github.com/redhat-developer/devconsole-git/pkg/log"
 	"sync"
 
-	"github.com/redhat-developer/devconsole-git/pkg/git/repository/generic"
 	"github.com/redhat-developer/devconsole-git/pkg/git/repository/github"
 )
 
@@ -42,10 +41,7 @@ func detectBuildEnvs(log *log.GitSourceLogger,
 		return nil, err
 	}
 	if service == nil {
-		service, err = generic.NewRepositoryService(gitSource, secretProvider)
-		if err != nil {
-			return nil, err
-		}
+		return &v1alpha1.BuildEnvStats{}, nil
 	}
 	return detectBuildEnvsUsingService(service)
 }
