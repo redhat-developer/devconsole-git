@@ -16,6 +16,8 @@ const (
 	unableParseBranchError = "unable to parse the branch"
 )
 
+// IsReachableWithBranch validates if a git repository defined by the given endpoint is reachable
+// and if it contains the given branch
 func IsReachableWithBranch(log *log.GitSourceLogger, branch string, endpoint *gittransport.Endpoint) (bool, error) {
 	if endpoint.Host == "" {
 		return false, fmt.Errorf(unableReachRepoError)
