@@ -5,6 +5,7 @@ import (
 	"github.com/redhat-developer/devconsole-api/pkg/apis/devconsole/v1alpha1"
 )
 
+// ValidationError holds message and reason of an error that occurred during a connection validation
 type ValidationError struct {
 	Message string
 	Reason  v1alpha1.ConnectionFailureReason
