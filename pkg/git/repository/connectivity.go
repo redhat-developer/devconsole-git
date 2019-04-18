@@ -32,9 +32,8 @@ func IsReachableWithBranch(log *log.GitSourceLogger, branch string, endpoint *gi
 	resp, err := client.Get(url)
 	if err != nil {
 		return false, fmt.Errorf(unableReachRepoError)
-	} else {
-		return validateBranch(log, branch, resp)
 	}
+	return validateBranch(log, branch, resp)
 }
 
 func validateBranch(log *log.GitSourceLogger, branch string, resp *http.Response) (bool, error) {
@@ -51,21 +50,18 @@ func validateBranch(log *log.GitSourceLogger, branch string, resp *http.Response
 
 	if resp.StatusCode != http.StatusOK {
 		return false, fmt.Errorf(unableReachRepoError)
-	} else {
-		if branch == "" {
-			branch = Master
-		}
-		branchRefRegexp := fmt.Sprintf(`\ refs\/heads\/%s\n`, branch)
-		compile, err := regexp.Compile(branchRefRegexp)
-		if err != nil {
-			log.Error(err, "error while parsing regexp of the given branch")
-			return false, fmt.Errorf(unableParseBranchError)
-		} else {
-			if compile.Find(body) != nil {
-				return true, nil
-			} else {
-				return false, fmt.Errorf(unableFindBranchError)
-			}
-		}
 	}
+	if branch == "" {
+		branch = Master
+	}
+	branchRefRegexp := fmt.Sprintf(`\ refs\/heads\/%s\n`, branch)
+	compile, err := regexp.Compile(branchRefRegexp)
+	if err != nil {
+		log.Error(err, "error while parsing regexp of the given branch")
+		return false, fmt.Errorf(unableParseBranchError)
+	}
+	if compile.Find(body) != nil {
+		return true, nil
+	}
+	return false, fmt.Errorf(unableFindBranchError)
 }
