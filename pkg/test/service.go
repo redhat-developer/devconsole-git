@@ -77,3 +77,13 @@ func (s *DummyService) Creator() repository.ServiceCreator {
 		return nil, nil
 	}
 }
+
+func (s *DummyService) CheckCredentials() error {
+	return nil
+}
+func (s *DummyService) CheckRepoAccessibility() error {
+	return nil
+}
+func (s *DummyService) CheckBranch() error {
+	return nil
+}

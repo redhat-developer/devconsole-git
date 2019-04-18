@@ -267,7 +267,7 @@ func TestRepositoryServiceWithPaginatedResult(t *testing.T) {
 		mockBBFilesCall(t, bbApiHost, repoIdentifier, "master", "", baseURL+"&page=8xhd", test.S("pom.xml"))
 		mockBBFilesCall(t, bbApiHost, repoIdentifier, "master", "8xhd", baseURL+"&page=dbtR", test.S("mvnw"))
 		mockBBFilesCall(t, bbApiHost, repoIdentifier, "master", "dbtR", "", test.S("any"))
-		mockBBLangCall(t, bbApiHost, repoIdentifier, "Java")
+		mockBBRepoCall(t, bbApiHost, repoIdentifier, "Java")
 
 		source := test.NewGitSource(test.WithURL(repoURL))
 
@@ -292,12 +292,138 @@ func TestRepositoryServiceWithPaginatedResult(t *testing.T) {
 	}
 }
 
-func mockBBCalls(t *testing.T, host, prjPath, branch, lang string, files test.SliceOfStrings) {
-	mockBBFilesCall(t, host, prjPath, branch, "", "", files)
-	mockBBLangCall(t, host, prjPath, lang)
+func TestRepositoryServiceCheckValidCredentials(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	for _, secret := range validSecrets {
+		gock.New(bbApiHost).
+			Get("/2.0/user").
+			Reply(200)
+
+		source := test.NewGitSource(test.WithURL(repoURL))
+		service, err := bitbucket.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
+		require.NoError(t, err)
+
+		// when
+		err = service.CheckCredentials()
+
+		// then
+		assert.NoError(t, err)
+	}
 }
 
-func mockBBLangCall(t *testing.T, host, prjPath, lang string) {
+func TestRepositoryServiceCheckInvalidCredentials(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	for _, secret := range validSecrets {
+		gock.New(bbApiHost).
+			Get("/2.0/user").
+			Reply(401)
+
+		source := test.NewGitSource(test.WithURL(repoURL))
+		service, err := bitbucket.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
+		require.NoError(t, err)
+
+		// when
+		err = service.CheckCredentials()
+
+		// then
+		assert.Error(t, err)
+	}
+}
+
+func TestRepositoryServiceCheckAccessibleRepo(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	for _, secret := range validSecrets {
+		mockBBRepoCall(t, bbApiHost, repoIdentifier, "")
+
+		source := test.NewGitSource(test.WithURL(repoURL))
+		service, err := bitbucket.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
+		require.NoError(t, err)
+
+		// when
+		err = service.CheckRepoAccessibility()
+
+		// then
+		assert.NoError(t, err)
+	}
+}
+
+func TestRepositoryServiceCheckInaccessibleRepo(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	for _, reply := range []int{404, 401} {
+		for _, secret := range validSecrets {
+			gock.New(bbApiHost).
+				Get(fmt.Sprintf("/2.0/repositories/%s/", repoIdentifier)).
+				Reply(reply)
+
+			source := test.NewGitSource(test.WithURL(repoURL))
+			service, err := bitbucket.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
+			require.NoError(t, err)
+
+			// when
+			err = service.CheckRepoAccessibility()
+
+			// then
+			assert.Error(t, err)
+		}
+	}
+}
+
+func TestRepositoryServiceCheckPresentBranch(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	for _, secret := range validSecrets {
+		gock.New(bbApiHost).
+			Get(fmt.Sprintf("/2.0/repositories/%s/refs/branches/master", repoIdentifier)).
+			Reply(200)
+
+		source := test.NewGitSource(test.WithURL(repoURL))
+		service, err := bitbucket.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
+		require.NoError(t, err)
+
+		// when
+		err = service.CheckBranch()
+
+		// then
+		assert.NoError(t, err)
+	}
+}
+
+func TestRepositoryServiceCheckMissingBranch(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	for _, secret := range validSecrets {
+		gock.New(bbApiHost).
+			Get(fmt.Sprintf("/2.0/repositories/%s/refs/branches/dev", repoIdentifier)).
+			Reply(404)
+
+		source := test.NewGitSource(test.WithURL(repoURL), test.WithRef("dev"))
+		service, err := bitbucket.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
+		require.NoError(t, err)
+
+		// when
+		err = service.CheckBranch()
+
+		// then
+		assert.Error(t, err)
+	}
+}
+
+func mockBBCalls(t *testing.T, host, prjPath, branch, lang string, files test.SliceOfStrings) {
+	mockBBFilesCall(t, host, prjPath, branch, "", "", files)
+	mockBBRepoCall(t, host, prjPath, lang)
+}
+
+func mockBBRepoCall(t *testing.T, host, prjPath, lang string) {
 	repoLang := bitbucket.RepositoryLanguage{Language: lang}
 
 	bytes, err := json.Marshal(repoLang)

@@ -41,6 +41,15 @@ func TestNewRepositoryServiceForAllSecretsAndMethods(t *testing.T) {
 		assert.Contains(t, languageList, "XML")
 		assert.Contains(t, languageList, "Java")
 		assert.Contains(t, languageList, "Go")
+
+		err = service.CheckCredentials()
+		require.NoError(t, err)
+
+		err = service.CheckRepoAccessibility()
+		require.NoError(t, err)
+
+		err = service.CheckBranch()
+		require.NoError(t, err)
 	}
 }
 
@@ -148,6 +157,31 @@ func TestNewRepositoryServiceShouldLoadFilesOnlyOnce(t *testing.T) {
 	assert.Contains(t, languageList, "Go")
 }
 
+func TestNewRepositoryServiceShouldLoadRemoteBranchesOnlyOnce(t *testing.T) {
+	// given
+	dummyRepo := test.NewDummyGitRepo(t, repository.Master)
+	dummyRepo.Commit("main.go")
+	source := test.NewGitSource(test.WithURL(dummyRepo.Path), test.WithRef("dev"))
+
+	service, err := generic.NewRepositoryService(source,
+		git.NewSecretProvider(git.NewSshKey(test.PrivateWithoutPassphrase(t, pathToTestDir), []byte(""))))
+	require.NoError(t, err)
+
+	// when
+	err = service.CheckCredentials()
+
+	// then
+	require.NoError(t, err)
+
+	// and when
+	dummyRepo.CheckoutBranch("dev")
+	dummyRepo.Commit("second-pom.xml")
+
+	// then it should use cache thus fail because originally the dev branch was missing
+	err = service.CheckBranch()
+	require.Error(t, err)
+}
+
 func TestNewRepositoryServiceUsingSSh(t *testing.T) {
 	// given
 	allowedPubKey := test.PublicWithoutPassphrase(t, pathToTestDir)
@@ -171,10 +205,20 @@ func TestNewRepositoryServiceUsingSSh(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, rootFiles, 1)
 	assert.Contains(t, rootFiles, "main.go")
+
 	languageList, err := service.GetLanguageList()
 	require.NoError(t, err)
 	assert.Len(t, languageList, 1)
 	assert.Contains(t, languageList, "Go")
+
+	err = service.CheckCredentials()
+	require.NoError(t, err)
+
+	err = service.CheckRepoAccessibility()
+	require.NoError(t, err)
+
+	err = service.CheckBranch()
+	require.NoError(t, err)
 }
 
 func TestNewRepositoryServiceUsingSShWithWrongKey(t *testing.T) {
@@ -195,12 +239,35 @@ func TestNewRepositoryServiceUsingSShWithWrongKey(t *testing.T) {
 	_, err = service.FileExistenceChecker()
 
 	// then
-	assert.Contains(t, err.Error(), "ssh: handshake failed: ssh: unable to authenticate")
+	assertHandshakeFailed(t, err)
 
 	// and when
 	_, err = service.GetLanguageList()
 
 	// then
+	assertHandshakeFailed(t, err)
+
+	// and when
+	err = service.CheckCredentials()
+
+	// then
+	assertHandshakeFailed(t, err)
+
+	// and when
+	err = service.CheckRepoAccessibility()
+
+	// then
+	assertHandshakeFailed(t, err)
+
+	// and when
+	err = service.CheckBranch()
+
+	// then
+	assertHandshakeFailed(t, err)
+}
+
+func assertHandshakeFailed(t *testing.T, err error) {
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "ssh: handshake failed: ssh: unable to authenticate")
 }
 
@@ -228,10 +295,20 @@ func TestNewRepositoryServiceUsingBasicSShAuth(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, rootFiles, 1)
 		assert.Contains(t, rootFiles, "main.go")
+
 		languageList, err := service.GetLanguageList()
 		require.NoError(t, err)
 		assert.Len(t, languageList, 1)
 		assert.Contains(t, languageList, "Go")
+
+		err = service.CheckCredentials()
+		require.NoError(t, err)
+
+		err = service.CheckRepoAccessibility()
+		require.NoError(t, err)
+
+		err = service.CheckBranch()
+		require.NoError(t, err)
 	}
 }
 
@@ -254,12 +331,30 @@ func TestNewRepositoryServiceUsingBasicSShAuthWithWrongPassword(t *testing.T) {
 		_, err = service.FileExistenceChecker()
 
 		// then
-		assert.Contains(t, err.Error(), "ssh: handshake failed: ssh: unable to authenticate")
+		assertHandshakeFailed(t, err)
 
 		// and when
 		_, err = service.GetLanguageList()
 
 		// then
-		assert.Contains(t, err.Error(), "ssh: handshake failed: ssh: unable to authenticate")
+		assertHandshakeFailed(t, err)
+
+		// and when
+		err = service.CheckCredentials()
+
+		// then
+		assertHandshakeFailed(t, err)
+
+		// and when
+		err = service.CheckRepoAccessibility()
+
+		// then
+		assertHandshakeFailed(t, err)
+
+		// and when
+		err = service.CheckBranch()
+
+		// then
+		assertHandshakeFailed(t, err)
 	}
 }

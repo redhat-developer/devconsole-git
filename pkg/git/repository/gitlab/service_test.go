@@ -182,6 +182,180 @@ func TestRepositoryServiceForPrivateInstance(t *testing.T) {
 	}
 }
 
+func TestRepositoryServiceCheckValidToken(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	gock.New(glHost).
+		Get("/api/v4/user").
+		Reply(200).
+		BodyString("{}")
+
+	source := test.NewGitSource(test.WithURL(repoURL))
+	service, err := gitlab.NewRepoServiceIfMatches()(logger, source,
+		git.NewSecretProvider(git.NewOauthToken([]byte("some-token"))))
+	require.NoError(t, err)
+
+	// when
+	err = service.CheckCredentials()
+
+	// then
+	assert.NoError(t, err)
+}
+
+func TestRepositoryServiceCheckInvalidToken(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	gock.New(glHost).
+		Get("/api/v4/user").
+		Reply(401).
+		BodyString("{}")
+
+	source := test.NewGitSource(test.WithURL(repoURL))
+	service, err := gitlab.NewRepoServiceIfMatches()(logger, source,
+		git.NewSecretProvider(git.NewOauthToken([]byte("some-token"))))
+	require.NoError(t, err)
+
+	// when
+	err = service.CheckCredentials()
+
+	// then
+	assert.Error(t, err)
+}
+
+func TestRepositoryServiceCheckValidUsernameAndPassword(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	mockTokenCall(t)
+	gock.New(glHost).
+		Get("/api/v4/user").
+		Reply(200).
+		BodyString("{}")
+
+	source := test.NewGitSource(test.WithURL(repoURL))
+	service, err := gitlab.NewRepoServiceIfMatches()(logger, source,
+		git.NewSecretProvider(git.NewUsernamePassword("user", "secret")))
+	require.NoError(t, err)
+
+	// when
+	err = service.CheckCredentials()
+
+	// then
+	assert.NoError(t, err)
+}
+
+func TestRepositoryServiceCheckInvalidUsernameAndPassword(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	gock.New("https://gitlab.com").
+		Post("/oauth/token").
+		Reply(401)
+
+	source := test.NewGitSource(test.WithURL(repoURL))
+	service, err := gitlab.NewRepoServiceIfMatches()(logger, source,
+		git.NewSecretProvider(git.NewUsernamePassword("user", "secret")))
+	require.NoError(t, err)
+
+	// when
+	err = service.CheckCredentials()
+
+	// then
+	assert.Error(t, err)
+}
+
+func TestRepositoryServiceCheckAccessibleRepo(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	mockTokenCall(t)
+	for _, secret := range validSecrets {
+		gock.New(glHost).
+			Get(fmt.Sprintf("/api/v4/projects/%s", repoIdentifier)).
+			Reply(200).
+			BodyString("{}")
+
+		source := test.NewGitSource(test.WithURL(repoURL))
+		service, err := gitlab.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
+		require.NoError(t, err)
+
+		// when
+		err = service.CheckRepoAccessibility()
+
+		// then
+		assert.NoError(t, err)
+	}
+}
+
+func TestRepositoryServiceCheckInaccessibleRepo(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	mockTokenCall(t)
+	for _, secret := range validSecrets {
+		gock.New(glHost).
+			Get(fmt.Sprintf("/api/v4/projects/%s", repoIdentifier)).
+			Reply(404)
+
+		source := test.NewGitSource(test.WithURL(repoURL))
+		service, err := gitlab.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
+		require.NoError(t, err)
+
+		// when
+		err = service.CheckRepoAccessibility()
+
+		// then
+		assert.Error(t, err)
+	}
+}
+
+func TestRepositoryServiceCheckPresentBranch(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	mockTokenCall(t)
+	for _, secret := range validSecrets {
+		gock.New(glHost).
+			Get(fmt.Sprintf("/api/v4/projects/%s/repository/branches/master", repoIdentifier)).
+			Reply(200).
+			BodyString("{}")
+
+		source := test.NewGitSource(test.WithURL(repoURL))
+		service, err := gitlab.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
+		require.NoError(t, err)
+
+		// when
+		err = service.CheckBranch()
+
+		// then
+		assert.NoError(t, err)
+	}
+}
+
+func TestRepositoryServiceCheckMissingBranch(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	for _, secret := range validSecrets {
+		gock.New(glHost).
+			Get(fmt.Sprintf("/api/v4/projects/%s/repository/branches/dev", repoIdentifier)).
+			Reply(404).
+			BodyString("{}")
+
+		source := test.NewGitSource(test.WithURL(repoURL), test.WithRef("dev"))
+		service, err := gitlab.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
+		require.NoError(t, err)
+
+		// when
+		err = service.CheckBranch()
+
+		// then
+		assert.Error(t, err)
+	}
+}
+
 func mockTokenCall(t *testing.T) {
 	token := &oauth2.Token{
 		AccessToken: "some-token",

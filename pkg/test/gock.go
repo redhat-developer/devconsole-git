@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/h2non/gock.v1"
 	"math/rand"
+	"net/http"
 	"strings"
 	"testing"
 )
@@ -87,4 +88,14 @@ func String(value string) *string {
 }
 func Boolean(value bool) *bool {
 	return &value
+}
+
+// TurnOffAllGockWhenMatched turns off all gock mocks when the matcher is matched
+func TurnOffAllGockWhenMatched() gock.Matcher {
+	matcher := gock.NewBasicMatcher()
+	matcher.Add(func(req *http.Request, _ *gock.Request) (bool, error) {
+		gock.OffAll()
+		return true, nil
+	})
+	return matcher
 }

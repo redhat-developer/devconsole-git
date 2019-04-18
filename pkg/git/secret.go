@@ -186,9 +186,20 @@ func ParseUsernameAndPassword(secret string) (string, string) {
 	return "", ""
 }
 
+// NewGitSecretProvider retrieves secret using the given client
+// and stores it to a new instance of GitSecretProvider that is then returned
 func NewGitSecretProvider(client client.Client, namespace string, gitSource *v1alpha1.GitSource) (*SecretProvider, error) {
+	secret, err := NewGitSecret(client, namespace, gitSource)
+	if err != nil {
+		return nil, err
+	}
+	return NewSecretProvider(secret), nil
+}
+
+// NewGitSecret retrieves a secret using the given client
+func NewGitSecret(client client.Client, namespace string, gitSource *v1alpha1.GitSource) (Secret, error) {
 	if gitSource.Spec.SecretRef == nil {
-		return NewSecretProvider(nil), nil
+		return nil, nil
 	}
 	coreSecret := &corev1.Secret{}
 	namespacedSecretName := types.NamespacedName{Namespace: namespace, Name: gitSource.Spec.SecretRef.Name}
@@ -211,5 +222,5 @@ func NewGitSecretProvider(client client.Client, namespace string, gitSource *v1a
 		return nil, fmt.Errorf("the provided secret does not contain any of the required parameters: [%s,%s,%s] or they are empty",
 			corev1.BasicAuthUsernameKey, corev1.BasicAuthPasswordKey, corev1.SSHAuthPrivateKey)
 	}
-	return NewSecretProvider(secret), nil
+	return secret, nil
 }

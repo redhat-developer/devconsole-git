@@ -110,3 +110,25 @@ func isAnonymousSecret(secret git.Secret) bool {
 	return secret.SecretType() == git.UsernamePasswordType &&
 		secret.SecretContent() == anonymousSecret.SecretContent()
 }
+
+func (s *RepositoryService) CheckCredentials() error {
+	_, _, err := s.client.Users.Get(context.Background(), "")
+	return err
+}
+
+func (s *RepositoryService) CheckRepoAccessibility() error {
+	_, _, err := s.client.Repositories.Get(
+		context.Background(),
+		s.repo.Owner,
+		s.repo.Name)
+	return err
+}
+
+func (s *RepositoryService) CheckBranch() error {
+	_, _, err := s.client.Repositories.GetBranch(
+		context.Background(),
+		s.repo.Owner,
+		s.repo.Name,
+		s.repo.Branch)
+	return err
+}
