@@ -17,14 +17,14 @@ import (
 	"strings"
 )
 
-// ValidateGitSource validates if a git repository defined by the given GitSource is reachable
-// and if it contains the defined branch (master if empty)
 var gitServiceCreators = []repository.ServiceCreator{
 	github.NewRepoServiceIfMatches(),
 	bitbucket.NewRepoServiceIfMatches(),
 	gitlab.NewRepoServiceIfMatches(),
 }
 
+// ValidateGitSource validates if a git repository defined by the given GitSource is reachable
+// and if it contains the defined branch (master if empty)
 func ValidateGitSource(log *log.GitSourceLogger, gitSource *v1alpha1.GitSource) *ValidationError {
 	endpoint, err := gittransport.NewEndpoint(gitSource.Spec.URL)
 	if err != nil {
