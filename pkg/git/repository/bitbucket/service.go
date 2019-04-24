@@ -23,6 +23,7 @@ type RepositoryService struct {
 	client  *http.Client
 	baseURL string
 	repo    repository.StructuredIdentifier
+	log     *log.GitSourceLogger
 }
 
 func NewRepoServiceIfMatches() repository.ServiceCreator {
@@ -36,13 +37,13 @@ func NewRepoServiceIfMatches() repository.ServiceCreator {
 		}
 		if endpoint.Host == bitbucketHost || gitSource.Spec.Flavor == bitbucketFlavor {
 			secret := secretProvider.GetSecret(git.NewOauthToken([]byte("")))
-			return newBbService(gitSource, endpoint, secret)
+			return newBbService(log, gitSource, endpoint, secret)
 		}
 		return nil, nil
 	}
 }
 
-func newBbService(gitSource *v1alpha1.GitSource, endpoint *gittransport.Endpoint, secret git.Secret) (*RepositoryService, error) {
+func newBbService(log *log.GitSourceLogger, gitSource *v1alpha1.GitSource, endpoint *gittransport.Endpoint, secret git.Secret) (*RepositoryService, error) {
 	repo, err := repository.NewStructuredIdentifier(gitSource, endpoint)
 	if err != nil {
 		return nil, err
@@ -54,6 +55,7 @@ func newBbService(gitSource *v1alpha1.GitSource, endpoint *gittransport.Endpoint
 		client:  client,
 		repo:    repo,
 		baseURL: getBaseURL(endpoint),
+		log:     log,
 	}, nil
 }
 
@@ -122,8 +124,29 @@ func (s *RepositoryService) GetLanguageList() ([]string, error) {
 	return []string{repoLanguage.Language}, nil
 }
 
+func (s *RepositoryService) CheckCredentials() error {
+	apiURL := fmt.Sprintf(`%s2.0/user`, s.baseURL)
+	_, err := s.do(apiURL)
+	return err
+}
+
+func (s *RepositoryService) CheckRepoAccessibility() error {
+	apiURL := fmt.Sprintf(`%s2.0/repositories/%s/%s/`, s.baseURL, s.repo.Owner, s.repo.Name)
+	_, err := s.do(apiURL)
+	return err
+}
+
+func (s *RepositoryService) CheckBranch() error {
+	apiURL := fmt.Sprintf(`%s2.0/repositories/%s/%s/refs/branches/%s`, s.baseURL, s.repo.Owner, s.repo.Name, s.repo.Branch)
+	_, err := s.do(apiURL)
+	return err
+}
+
 func (s *RepositoryService) do(apiURL string) ([]byte, error) {
 	req, err := http.NewRequest(http.MethodGet, apiURL, nil)
+	if err != nil {
+		return nil, err
+	}
 	if s.secret.SecretType() == git.UsernamePasswordType {
 		req.SetBasicAuth(git.ParseUsernameAndPassword(s.secret.SecretContent()))
 	}
@@ -132,7 +155,10 @@ func (s *RepositoryService) do(apiURL string) ([]byte, error) {
 		return nil, err
 	}
 	defer func() {
-		resp.Body.Close()
+		err := resp.Body.Close()
+		if err != nil {
+			s.log.Error(err, "closing body failed")
+		}
 	}()
 
 	respBody, err := ioutil.ReadAll(resp.Body)

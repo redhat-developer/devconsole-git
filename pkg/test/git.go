@@ -29,10 +29,11 @@ func NewDummyGitRepo(t *testing.T, branchName string) *DummyGitRepo {
 	require.NoError(t, err)
 	client, err := gogit.PlainInit(clientPath, false)
 	require.NoError(t, err)
-	client.CreateRemote(&config.RemoteConfig{
+	_, err = client.CreateRemote(&config.RemoteConfig{
 		URLs: []string{path},
 		Name: gogit.DefaultRemoteName,
 	})
+	require.NoError(t, err)
 
 	worktree, err := client.Worktree()
 	require.NoError(t, err)
@@ -46,10 +47,7 @@ func NewDummyGitRepo(t *testing.T, branchName string) *DummyGitRepo {
 	dummyGitRepo.createInitialCommits()
 
 	if branchName != repository.Master {
-		err = worktree.Checkout(&gogit.CheckoutOptions{
-			Branch: plumbing.ReferenceName("refs/heads/" + branchName),
-			Create: true,
-		})
+		dummyGitRepo.CheckoutBranch(branchName)
 		require.NoError(t, err)
 	}
 
@@ -92,4 +90,12 @@ func newCommitOptions() *gogit.CommitOptions {
 			When:  time.Now(),
 		},
 	}
+}
+
+func (r *DummyGitRepo) CheckoutBranch(branchName string) {
+	err := r.workTree.Checkout(&gogit.CheckoutOptions{
+		Branch: plumbing.ReferenceName("refs/heads/" + branchName),
+		Create: true,
+	})
+	require.NoError(r.t, err)
 }

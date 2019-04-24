@@ -15,8 +15,8 @@ const (
 )
 
 type RepositoryService struct {
-	client *gogl.Client
-	repo   repository.StructuredIdentifier
+	clientInitializer *clientInitializer
+	repo              repository.StructuredIdentifier
 }
 
 // NewRepoServiceIfMatches returns function creating Github repository service if either host of the git repo URL is gitlab.com
@@ -33,33 +33,51 @@ func NewRepoServiceIfMatches() repository.ServiceCreator {
 
 		if endpoint.Host == gitlabHost || gitSource.Spec.Flavor == gitlabFlavor {
 			secret := secretProvider.GetSecret(git.NewOauthToken([]byte("")))
-			return newGhClient(gitSource, secret, endpoint)
+			return newGlService(gitSource, secret, endpoint)
 		}
 		return nil, nil
 	}
 }
 
-func newGhClient(gitSource *v1alpha1.GitSource, secret git.Secret, endpoint *gittransport.Endpoint) (*RepositoryService, error) {
+func newGlService(gitSource *v1alpha1.GitSource, secret git.Secret, endpoint *gittransport.Endpoint) (*RepositoryService, error) {
 	repo, err := repository.NewStructuredIdentifier(gitSource, endpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	client := gogl.NewClient(nil, secret.SecretContent())
-	client.SetBaseURL(getBaseUrl(endpoint))
+	return &RepositoryService{
+		clientInitializer: &clientInitializer{
+			secret:   secret,
+			endpoint: endpoint,
+		},
+		repo: repo,
+	}, nil
+}
 
-	if secret.SecretType() == git.UsernamePasswordType {
-		username, password := git.ParseUsernameAndPassword(secret.SecretContent())
-		client, err = gogl.NewBasicAuthClient(nil, getBaseUrl(endpoint), username, password)
+type clientInitializer struct {
+	client   *gogl.Client
+	secret   git.Secret
+	endpoint *gittransport.Endpoint
+}
+
+func (i *clientInitializer) init() (*gogl.Client, error) {
+	if i.client == nil {
+		client := gogl.NewClient(nil, i.secret.SecretContent())
+		err := client.SetBaseURL(getBaseUrl(i.endpoint))
 		if err != nil {
 			return nil, err
 		}
-	}
 
-	return &RepositoryService{
-		client: client,
-		repo:   repo,
-	}, nil
+		if i.secret.SecretType() == git.UsernamePasswordType {
+			username, password := git.ParseUsernameAndPassword(i.secret.SecretContent())
+			client, err = gogl.NewBasicAuthClient(nil, getBaseUrl(i.endpoint), username, password)
+			if err != nil {
+				return nil, err
+			}
+		}
+		i.client = client
+	}
+	return i.client, nil
 }
 
 func getBaseUrl(endpoint *gittransport.Endpoint) string {
@@ -70,7 +88,11 @@ func getBaseUrl(endpoint *gittransport.Endpoint) string {
 }
 
 func (s *RepositoryService) FileExistenceChecker() (repository.FileExistenceChecker, error) {
-	tree, _, err := s.client.Repositories.ListTree(
+	client, err := s.clientInitializer.init()
+	if err != nil {
+		return nil, err
+	}
+	tree, _, err := client.Repositories.ListTree(
 		s.repo.OwnerWithName(),
 		&gogl.ListTreeOptions{
 			Ref: &s.repo.Branch,
@@ -86,10 +108,40 @@ func (s *RepositoryService) FileExistenceChecker() (repository.FileExistenceChec
 }
 
 func (s *RepositoryService) GetLanguageList() ([]string, error) {
-	languages, _, err := s.client.Projects.GetProjectLanguages(s.repo.OwnerWithName())
+	client, err := s.clientInitializer.init()
+	if err != nil {
+		return nil, err
+	}
+	languages, _, err := client.Projects.GetProjectLanguages(s.repo.OwnerWithName())
 	if err != nil {
 		return nil, err
 	}
 
 	return git.SortLanguagesWithFloats32(*languages), nil
+}
+func (s *RepositoryService) CheckCredentials() error {
+	client, err := s.clientInitializer.init()
+	if err != nil {
+		return err
+	}
+	_, _, err = client.Users.CurrentUser()
+	return err
+}
+
+func (s *RepositoryService) CheckRepoAccessibility() error {
+	client, err := s.clientInitializer.init()
+	if err != nil {
+		return err
+	}
+	_, _, err = client.Projects.GetProject(s.repo.OwnerWithName(), &gogl.GetProjectOptions{})
+	return err
+}
+
+func (s *RepositoryService) CheckBranch() error {
+	client, err := s.clientInitializer.init()
+	if err != nil {
+		return err
+	}
+	_, _, err = client.Branches.GetBranch(s.repo.OwnerWithName(), s.repo.Branch)
+	return err
 }

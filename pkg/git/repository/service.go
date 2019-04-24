@@ -12,6 +12,12 @@ type GitService interface {
 	FileExistenceChecker() (FileExistenceChecker, error)
 	// GetLanguageList returns list of detected languages in the sorted order where the first one is the most used
 	GetLanguageList() ([]string, error)
+	// CheckCredentials tries to get user  information associated with the attached secret from the git server
+	CheckCredentials() error
+	// Tries to connect to the git repository with the attached secret
+	CheckRepoAccessibility() error
+	// Checks if the branch exists in the git repository
+	CheckBranch() error
 }
 
 type FileExistenceChecker interface {

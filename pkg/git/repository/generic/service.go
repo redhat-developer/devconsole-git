@@ -20,9 +20,11 @@ import (
 )
 
 type RepositoryService struct {
-	repository *gogit.Repository
-	authMethod transport.AuthMethod
-	treeLoader *treeLoader
+	branch               string
+	repository           *gogit.Repository
+	authMethod           transport.AuthMethod
+	treeLoader           *treeLoader
+	remoteBranchesLoader *remoteBranchesLoader
 }
 
 type treeLoader struct {
@@ -31,8 +33,8 @@ type treeLoader struct {
 }
 
 func NewRepositoryService(gitSource *v1alpha1.GitSource, secretProvider *git.SecretProvider) (repository.GitService, error) {
-	storage := memory.NewStorage()
-	return newRepositoryService(gitSource, secretProvider.GetSecret(nil), storage)
+	store := memory.NewStorage()
+	return newRepositoryService(gitSource, secretProvider.GetSecret(nil), store)
 }
 
 func newRepositoryService(gitSource *v1alpha1.GitSource, secret git.Secret, storage storage.Storer) (*RepositoryService, error) {
@@ -41,12 +43,18 @@ func newRepositoryService(gitSource *v1alpha1.GitSource, secret git.Secret, stor
 		branch = gitSource.Spec.Ref
 	}
 	refSpec := fmt.Sprintf("+refs/heads/%[1]s:refs/remotes/origin/%[1]s", branch)
-	repository, err := gogit.Init(storage, memfs.New())
-	repository.CreateRemote(&config.RemoteConfig{
+	repo, err := gogit.Init(storage, memfs.New())
+	if err != nil {
+		return nil, err
+	}
+	_, err = repo.CreateRemote(&config.RemoteConfig{
 		Name:  gogit.DefaultRemoteName,
 		URLs:  []string{gitSource.Spec.URL},
 		Fetch: []config.RefSpec{config.RefSpec(refSpec)},
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	var authMethod transport.AuthMethod
 	if secret != nil {
@@ -57,9 +65,11 @@ func newRepositoryService(gitSource *v1alpha1.GitSource, secret git.Secret, stor
 	}
 
 	service := &RepositoryService{
-		repository: repository,
-		authMethod: authMethod,
-		treeLoader: &treeLoader{},
+		branch:               branch,
+		repository:           repo,
+		authMethod:           authMethod,
+		treeLoader:           &treeLoader{},
+		remoteBranchesLoader: &remoteBranchesLoader{},
 	}
 
 	return service, nil
@@ -82,7 +92,13 @@ func (l *treeLoader) fetchTree(repository *gogit.Repository, authMethod transpor
 		return nil, err
 	}
 	commitIter, err := repository.CommitObjects()
+	if err != nil {
+		return nil, err
+	}
 	commitToList, err := commitIter.Next()
+	if err != nil {
+		return nil, err
+	}
 
 	commit, err := repository.CommitObject(commitToList.Hash)
 	if err != nil {
@@ -148,4 +164,51 @@ func (s *RepositoryService) GetLanguageList() ([]string, error) {
 		return nil, err
 	}
 	return git.SortLanguagesWithInts(languagesCounts), nil
+}
+
+func (s *RepositoryService) CheckCredentials() error {
+	_, err := s.remoteBranchesLoader.load(s.repository, s.authMethod)
+	return err
+}
+
+func (s *RepositoryService) CheckRepoAccessibility() error {
+	_, err := s.remoteBranchesLoader.load(s.repository, s.authMethod)
+	return err
+}
+
+func (s *RepositoryService) CheckBranch() error {
+	branches, err := s.remoteBranchesLoader.load(s.repository, s.authMethod)
+	if err != nil {
+		return err
+	}
+	for _, branch := range branches {
+		if branch == s.branch {
+			return nil
+		}
+	}
+	return fmt.Errorf("branch not found")
+}
+
+type remoteBranchesLoader struct {
+	remoteBranches []string
+}
+
+func (l *remoteBranchesLoader) load(repository *gogit.Repository, authMethod transport.AuthMethod) ([]string, error) {
+	if l.remoteBranches != nil {
+		return l.remoteBranches, nil
+	}
+	remote, err := repository.Remote(gogit.DefaultRemoteName)
+	if err != nil {
+		return nil, err
+	}
+	references, err := remote.List(&gogit.ListOptions{Auth: authMethod})
+	if err != nil {
+		return nil, err
+	}
+	var branches []string
+	for _, ref := range references {
+		branches = append(branches, ref.Name().Short())
+	}
+	l.remoteBranches = branches
+	return branches, nil
 }

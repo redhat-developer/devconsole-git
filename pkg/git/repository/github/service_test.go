@@ -15,6 +15,7 @@ import (
 )
 
 const (
+	ghApiHost      = "https://api.github.com"
 	pathToTestDir  = "../../../test"
 	repoIdentifier = "some-org/some-repo"
 	repoURL        = "https://github.com/" + repoIdentifier
@@ -197,5 +198,131 @@ func TestRepositoryServiceUsesHeadCallsWhenAnonymousSecretIsUsed(t *testing.T) {
 		languageList, err := service.GetLanguageList()
 		require.NoError(t, err)
 		require.Len(t, languageList, 0)
+	}
+}
+
+func TestRepositoryServiceCheckValidCredentials(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	for _, secret := range validSecrets {
+		gock.New(ghApiHost).
+			Get("user").
+			Reply(200)
+
+		source := test.NewGitSource(test.WithURL(repoURL))
+		service, err := github.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
+		require.NoError(t, err)
+
+		// when
+		err = service.CheckCredentials()
+
+		// then
+		assert.NoError(t, err)
+	}
+}
+
+func TestRepositoryServiceCheckInvalidCredentials(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	for _, secret := range validSecrets {
+		gock.New(ghApiHost).
+			Get("user").
+			Reply(401)
+
+		source := test.NewGitSource(test.WithURL(repoURL))
+		service, err := github.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
+		require.NoError(t, err)
+
+		// when
+		err = service.CheckCredentials()
+
+		// then
+		assert.Error(t, err)
+	}
+}
+
+func TestRepositoryServiceCheckAccessibleRepo(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	for _, secret := range validSecrets {
+		gock.New(ghApiHost).
+			Get(fmt.Sprintf("repos/%s", repoIdentifier)).
+			Reply(200)
+
+		source := test.NewGitSource(test.WithURL(repoURL))
+		service, err := github.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
+		require.NoError(t, err)
+
+		// when
+		err = service.CheckRepoAccessibility()
+
+		// then
+		assert.NoError(t, err)
+	}
+}
+
+func TestRepositoryServiceCheckInaccessibleRepo(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	for _, secret := range validSecrets {
+		gock.New(ghApiHost).
+			Get(fmt.Sprintf("repos/%s", repoIdentifier)).
+			Reply(404)
+
+		source := test.NewGitSource(test.WithURL(repoURL))
+		service, err := github.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
+		require.NoError(t, err)
+
+		// when
+		err = service.CheckRepoAccessibility()
+
+		// then
+		assert.Error(t, err)
+	}
+}
+
+func TestRepositoryServiceCheckPresentBranch(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	for _, secret := range validSecrets {
+		gock.New(ghApiHost).
+			Get(fmt.Sprintf("repos/%s/branches/master", repoIdentifier)).
+			Reply(200)
+
+		source := test.NewGitSource(test.WithURL(repoURL))
+		service, err := github.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
+		require.NoError(t, err)
+
+		// when
+		err = service.CheckBranch()
+
+		// then
+		assert.NoError(t, err)
+	}
+}
+
+func TestRepositoryServiceCheckMissingBranch(t *testing.T) {
+	// given
+	defer gock.OffAll()
+
+	for _, secret := range validSecrets {
+		gock.New(ghApiHost).
+			Get(fmt.Sprintf("repos/%s/branches/dev", repoIdentifier)).
+			Reply(404)
+
+		source := test.NewGitSource(test.WithURL(repoURL), test.WithRef("dev"))
+		service, err := github.NewRepoServiceIfMatches()(logger, source, git.NewSecretProvider(secret))
+		require.NoError(t, err)
+
+		// when
+		err = service.CheckBranch()
+
+		// then
+		assert.Error(t, err)
 	}
 }
