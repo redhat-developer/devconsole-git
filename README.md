@@ -22,6 +22,30 @@ make build
 make clean
 ```
 
+### Deploy the operator in dev mode
+
+* Make sure minishift is running
+* In dev mode, simply run your operator locally:
+```
+make local
+```
+> NOTE: To watch all namespaces, `APP_NAMESPACE` is set to empty string. 
+If a specific namespace is provided only that project will watched. 
+As we reuse `openshift`'s imagestreams for build, we need to access all namespaces.
+ 
+### Deploy the operator with Deployment yaml
+
+* Make sure minishift is running
+* To deploy all necessary objects including the operator yaml file run:
+```
+make deploy-all
+```
+
+* Clean previously created resources
+```
+make clean-resources
+```
+
 [dep_tool]:https://golang.github.io/dep/docs/installation.html
 [go_tool]:https://golang.org/dl/
 [git_tool]:https://git-scm.com/downloads
