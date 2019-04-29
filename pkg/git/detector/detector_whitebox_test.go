@@ -42,10 +42,7 @@ func TestDetectBuildEnvsShouldUseGenericGitIfNotOtherMatches(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	require.NotNil(t, buildEnvStats)
-
-	assert.Empty(t, buildEnvStats.DetectedBuildTypes)
-	assert.Empty(t, buildEnvStats.SortedLanguages)
+	assert.Nil(t, buildEnvStats)
 }
 
 func TestFailingCreator(t *testing.T) {
@@ -72,8 +69,7 @@ func TestFailingGenericGitCreation(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	assert.Empty(t, buildEnvStats.DetectedBuildTypes)
-	assert.Empty(t, buildEnvStats.SortedLanguages)
+	assert.Nil(t, buildEnvStats)
 }
 
 func TestFailingGetFileList(t *testing.T) {
@@ -148,8 +144,7 @@ func TestGenericGitUsingSshAccessingGitLabWithDefaultCredentials(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	assert.Empty(t, buildEnvStats.DetectedBuildTypes)
-	assert.Empty(t, buildEnvStats.SortedLanguages)
+	assert.Nil(t, buildEnvStats)
 }
 
 func TestGenericGitUsingSshAccessingBitbucketWithDefaultCredentials(t *testing.T) {
@@ -161,8 +156,7 @@ func TestGenericGitUsingSshAccessingBitbucketWithDefaultCredentials(t *testing.T
 
 	// then
 	require.NoError(t, err)
-	assert.Empty(t, buildEnvStats.DetectedBuildTypes)
-	assert.Empty(t, buildEnvStats.SortedLanguages)
+	assert.Nil(t, buildEnvStats)
 }
 
 func TestGenericGitUsingSshAccessingGitHubWithDefaultCredentials(t *testing.T) {
@@ -174,8 +168,7 @@ func TestGenericGitUsingSshAccessingGitHubWithDefaultCredentials(t *testing.T) {
 
 	// then
 	require.NoError(t, err)
-	assert.Empty(t, buildEnvStats.DetectedBuildTypes)
-	assert.Empty(t, buildEnvStats.SortedLanguages)
+	assert.Nil(t, buildEnvStats)
 }
 
 // ignored tests as they reach the real services or needs specific credentials

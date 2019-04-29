@@ -2,6 +2,7 @@ package gitsourceanalysis
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-logr/logr"
 	"github.com/redhat-developer/devconsole-git/pkg/git"
 	"github.com/redhat-developer/devconsole-git/pkg/git/detector"
@@ -88,33 +89,22 @@ func (r *ReconcileGitSourceAnalysis) Reconcile(request reconcile.Request) (recon
 	if gsAnalysis.Status.Analyzed {
 		reqLogger.WithValues("git-source", gsAnalysis.Spec.GitSourceRef).
 			Info("Skipping GitSourceAnalysis as it was already analyzed")
-		return reconcile.Result{}, err
+		return reconcile.Result{}, nil
 	}
 
-	return analyze(reqLogger, r.client, gsAnalysis, request.Namespace)
-}
-
-func analyze(logger logr.Logger, client client.Client, gsAnalysis *v1alpha1.GitSourceAnalysis, namespace string) (reconcile.Result, error) {
-	gitSource := &v1alpha1.GitSource{}
-	err := client.Get(context.TODO(), newNamespacedName(namespace, gsAnalysis.Spec.GitSourceRef.Name), gitSource)
-	if err != nil {
-		gsAnalysis.Status.Error = "Failed to fetch the input source"
-		logger.WithValues("git-source", gsAnalysis.Spec.GitSourceRef).
-			Error(err, "There was an error while reading the GitSource object")
-
+	buildEnvStats, analysisError := analyze(reqLogger, r.client, gsAnalysis, request.Namespace)
+	if analysisError != nil {
+		gsAnalysis.Status.Error = analysisError.message
+		gsAnalysis.Status.Reason = analysisError.reason
 	} else {
-		buildEnvStats, err := analyzeGitSource(log.LogWithGSValues(logger, gitSource), client, gitSource, namespace)
-		if err != nil {
-			gsAnalysis.Status.Error = err.Error()
-		} else {
-			gsAnalysis.Status.BuildEnvStatistics = *buildEnvStats
-		}
+		gsAnalysis.Status.BuildEnvStatistics = *buildEnvStats
 	}
 
 	gsAnalysis.Status.Analyzed = true
-	err = client.Update(context.TODO(), gsAnalysis)
+	err = r.client.Update(context.TODO(), gsAnalysis)
 	if err != nil {
-		log.LogWithGSValues(logger, gitSource).Error(err, "Error updating GitSourceAnalysis object")
+		reqLogger.WithValues("git-source", gsAnalysis.Spec.GitSourceRef).
+			Error(err, "Error updating GitSourceAnalysis object")
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
@@ -124,11 +114,22 @@ func analyze(logger logr.Logger, client client.Client, gsAnalysis *v1alpha1.GitS
 		// Error updating the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-
 	return reconcile.Result{}, nil
 }
 
-func analyzeGitSource(logger *log.GitSourceLogger, client client.Client, gitSource *v1alpha1.GitSource, namespace string) (*v1alpha1.BuildEnvStats, error) {
+func analyze(logger logr.Logger, client client.Client, gsAnalysis *v1alpha1.GitSourceAnalysis, namespace string) (*v1alpha1.BuildEnvStats, *analysisError) {
+	gitSource := &v1alpha1.GitSource{}
+	err := client.Get(context.TODO(), newNamespacedName(namespace, gsAnalysis.Spec.GitSourceRef.Name), gitSource)
+	if err != nil {
+		logger.WithValues("git-source", gsAnalysis.Spec.GitSourceRef).
+			Error(err, "There was an error while reading the GitSource object")
+		return nil,
+			newAnalysisErrorf(v1alpha1.AnalysisInternalFailure, "failed to fetch the input source: %s", err)
+	}
+	return analyzeGitSource(log.LogWithGSValues(logger, gitSource), client, gitSource, namespace)
+}
+
+func analyzeGitSource(logger *log.GitSourceLogger, client client.Client, gitSource *v1alpha1.GitSource, namespace string) (*v1alpha1.BuildEnvStats, *analysisError) {
 	logger.Info("Analyzing GitSource")
 
 	// Fetch the GitSource secret
@@ -136,17 +137,36 @@ func analyzeGitSource(logger *log.GitSourceLogger, client client.Client, gitSour
 	if err != nil {
 		logger.WithValues("secret", gitSource.Spec.SecretRef.Name).
 			Error(err, "Error reading the secret object")
-		return nil, err
+		return nil,
+			newAnalysisErrorf(v1alpha1.AnalysisInternalFailure, "error reading the secret object: %s", err)
 
 	} else {
 		buildEnvStats, err := detector.DetectBuildEnvironments(logger, gitSource, gitSecretProvider)
 		if err != nil {
 			logger.Error(err, "Error detecting build types")
+			return buildEnvStats,
+				newAnalysisErrorf(v1alpha1.DetectionFailed, "error detecting build types: %s", err)
+		} else if buildEnvStats == nil {
+			return buildEnvStats,
+				newAnalysisErrorf(v1alpha1.NotSupportedType, "the git type is not supported")
 		}
-		return buildEnvStats, err
+		return buildEnvStats, nil
 	}
 }
 
 func newNamespacedName(namespace, name string) types.NamespacedName {
 	return types.NamespacedName{Namespace: namespace, Name: name}
+}
+
+type analysisError struct {
+	message string
+	reason  v1alpha1.AnalysisFailureReason
+}
+
+func (e analysisError) Error() string {
+	return fmt.Sprintf("message: %s, reason: %s", e.message, e.reason)
+}
+
+func newAnalysisErrorf(reason v1alpha1.AnalysisFailureReason, message string, args ...interface{}) *analysisError {
+	return &analysisError{message: fmt.Sprintf(message, args...), reason: reason}
 }
