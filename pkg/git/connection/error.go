@@ -6,15 +6,24 @@ import (
 )
 
 // ValidationError holds message and reason of an error that occurred during a connection validation
-type ValidationError struct {
-	Message string
-	Reason  v1alpha1.ConnectionFailureReason
+type ValidationError interface {
+	error
+	Reason() v1alpha1.ConnectionFailureReason
 }
 
-func (e ValidationError) Error() string {
-	return fmt.Sprintf("message: %s, reason: %s", e.Message, e.Reason)
+type validationError struct {
+	message string
+	reason  v1alpha1.ConnectionFailureReason
 }
 
-func newValidationErrorf(reason v1alpha1.ConnectionFailureReason, message string, args ...interface{}) *ValidationError {
-	return &ValidationError{Message: fmt.Sprintf(message, args...), Reason: reason}
+func (e *validationError) Error() string {
+	return e.message
+}
+
+func (e *validationError) Reason() v1alpha1.ConnectionFailureReason {
+	return e.reason
+}
+
+func newValidationErrorf(reason v1alpha1.ConnectionFailureReason, message string, args ...interface{}) ValidationError {
+	return &validationError{message: fmt.Sprintf(message, args...), reason: reason}
 }

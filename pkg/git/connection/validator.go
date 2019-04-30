@@ -25,7 +25,7 @@ var gitServiceCreators = []repository.ServiceCreator{
 
 // ValidateGitSource validates if a git repository defined by the given GitSource is reachable
 // and if it contains the defined branch (master if empty)
-func ValidateGitSource(log *log.GitSourceLogger, gitSource *v1alpha1.GitSource) *ValidationError {
+func ValidateGitSource(log *log.GitSourceLogger, gitSource *v1alpha1.GitSource) ValidationError {
 	endpoint, err := gittransport.NewEndpoint(gitSource.Spec.URL)
 	if err != nil {
 		return newValidationErrorf(v1alpha1.RepoNotReachable, "unable to parse the URL: %s", err.Error())
@@ -52,7 +52,7 @@ func ValidateGitSource(log *log.GitSourceLogger, gitSource *v1alpha1.GitSource) 
 	return validateBranch(log, gitSource.Spec.Ref, resp)
 }
 
-func validateBranch(log *log.GitSourceLogger, branch string, resp *http.Response) *ValidationError {
+func validateBranch(log *log.GitSourceLogger, branch string, resp *http.Response) ValidationError {
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Error(err, "error while reading body")
@@ -84,14 +84,14 @@ func validateBranch(log *log.GitSourceLogger, branch string, resp *http.Response
 
 // ValidateGitSourceWithSecret detects build tools and languages using the given secret in the git repository
 // defined by the given v1alpha1.GitSource
-func ValidateGitSourceWithSecret(log *log.GitSourceLogger, gitSource *v1alpha1.GitSource, secret git.Secret) *ValidationError {
+func ValidateGitSourceWithSecret(log *log.GitSourceLogger, gitSource *v1alpha1.GitSource, secret git.Secret) ValidationError {
 	return validateGitSourceWithSecret(log, gitSource, git.NewSecretProvider(secret), gitServiceCreators)
 }
 
 func validateGitSourceWithSecret(log *log.GitSourceLogger,
 	gitSource *v1alpha1.GitSource,
 	secretProvider *git.SecretProvider,
-	serviceCreators []repository.ServiceCreator) *ValidationError {
+	serviceCreators []repository.ServiceCreator) ValidationError {
 
 	service, err := repository.NewGitService(log, gitSource, secretProvider, serviceCreators)
 	if err != nil {

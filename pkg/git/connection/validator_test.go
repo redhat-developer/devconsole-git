@@ -33,7 +33,7 @@ func TestIsReachableRealGHRepoWithDevelopBranch(t *testing.T) {
 	validationErr := connection.ValidateGitSource(logger, gitSource)
 
 	// then
-	assert.Nil(t, validationErr)
+	assert.NoError(t, validationErr)
 }
 
 func TestIsReachableRealGHRepoUrlEndingWithSlash(t *testing.T) {
@@ -45,7 +45,7 @@ func TestIsReachableRealGHRepoUrlEndingWithSlash(t *testing.T) {
 	validationErr := connection.ValidateGitSource(logger, gitSource)
 
 	// then
-	assert.Nil(t, validationErr)
+	assert.NoError(t, validationErr)
 }
 
 func TestIsReachableRealGLRepoWithNoBranchSet(t *testing.T) {
@@ -56,7 +56,7 @@ func TestIsReachableRealGLRepoWithNoBranchSet(t *testing.T) {
 	validationErr := connection.ValidateGitSource(logger, gitSource)
 
 	// then
-	assert.Nil(t, validationErr)
+	assert.NoError(t, validationErr)
 }
 
 func TestIsReachableRealBBRepoWithNoBranchSet(t *testing.T) {
@@ -67,7 +67,7 @@ func TestIsReachableRealBBRepoWithNoBranchSet(t *testing.T) {
 	validationErr := connection.ValidateGitSource(logger, gitSource)
 
 	// then
-	assert.Nil(t, validationErr)
+	assert.NoError(t, validationErr)
 }
 
 func TestIsReachableRealGHNonExistingRepo(t *testing.T) {
@@ -78,8 +78,8 @@ func TestIsReachableRealGHNonExistingRepo(t *testing.T) {
 	validationErr := connection.ValidateGitSource(logger, gitSource)
 
 	// then
-	require.NotNil(t, validationErr)
-	assert.Equal(t, v1alpha1.RepoNotReachable, validationErr.Reason)
+	require.Error(t, validationErr)
+	assert.Equal(t, v1alpha1.RepoNotReachable, validationErr.Reason())
 }
 
 func TestIsReachableRealGLRepoWithNonExistingBranch(t *testing.T) {
@@ -92,8 +92,8 @@ func TestIsReachableRealGLRepoWithNonExistingBranch(t *testing.T) {
 	validationErr := connection.ValidateGitSource(logger, gitSource)
 
 	// then
-	require.NotNil(t, validationErr)
-	assert.Equal(t, v1alpha1.BranchNotFound, validationErr.Reason)
+	require.Error(t, validationErr)
+	assert.Equal(t, v1alpha1.BranchNotFound, validationErr.Reason())
 }
 
 func TestIsReachableRealRepoWithDevelopBranch(t *testing.T) {
@@ -135,8 +135,8 @@ func TestIsReachableForWrongURL(t *testing.T) {
 	validationErr := connection.ValidateGitSource(logger, gitSource)
 
 	// then
-	require.NotNil(t, validationErr)
-	assert.Equal(t, v1alpha1.RepoNotReachable, validationErr.Reason)
+	require.Error(t, validationErr)
+	assert.Equal(t, v1alpha1.RepoNotReachable, validationErr.Reason())
 }
 
 //
@@ -152,8 +152,8 @@ func TestValidateRealGitHubInvalidSecret(t *testing.T) {
 	validationErr := connection.ValidateGitSourceWithSecret(logger, glSource, git.NewOauthToken([]byte("some-token")))
 
 	// then
-	require.NotNil(t, validationErr)
-	assert.Equal(t, v1alpha1.BadCredentials, validationErr.Reason)
+	require.Error(t, validationErr)
+	assert.Equal(t, v1alpha1.BadCredentials, validationErr.Reason())
 }
 
 func TestValidateGitLabSecretAndAvailableRepo(t *testing.T) {
@@ -170,7 +170,7 @@ func TestValidateGitLabSecretAndAvailableRepo(t *testing.T) {
 	err := connection.ValidateGitSourceWithSecret(logger, glSource, git.NewOauthToken([]byte("")))
 
 	// then
-	require.Nil(t, err)
+	require.NoError(t, err)
 }
 
 func TestValidateGitLabSecretAndAvailableRepoWithWrongBranch(t *testing.T) {
@@ -189,7 +189,8 @@ func TestValidateGitLabSecretAndAvailableRepoWithWrongBranch(t *testing.T) {
 	validationErr := connection.ValidateGitSourceWithSecret(logger, glSource, git.NewOauthToken([]byte("")))
 
 	// then
-	assert.Equal(t, v1alpha1.BranchNotFound, validationErr.Reason)
+	require.Error(t, validationErr)
+	assert.Equal(t, v1alpha1.BranchNotFound, validationErr.Reason())
 }
 
 func TestValidateBitBucketWrongRepo(t *testing.T) {
@@ -205,5 +206,6 @@ func TestValidateBitBucketWrongRepo(t *testing.T) {
 	validationErr := connection.ValidateGitSourceWithSecret(logger, glSource, git.NewOauthToken([]byte("")))
 
 	// then
-	assert.Equal(t, v1alpha1.RepoNotReachable, validationErr.Reason)
+	require.Error(t, validationErr)
+	assert.Equal(t, v1alpha1.RepoNotReachable, validationErr.Reason())
 }
