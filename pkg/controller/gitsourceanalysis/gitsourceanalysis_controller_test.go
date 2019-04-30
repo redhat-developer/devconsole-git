@@ -104,8 +104,7 @@ func TestReconcileGitSourceAnalysisFromGitHubWithWrongSecret(t *testing.T) {
 
 	//then
 	require.NoError(t, err)
-	assertGitSourceAnalysis(t, client,
-		"the provided secret does not contain any of the required parameters: [username,password,ssh-privatekey] or they are empty", nil)
+	assertGitSourceAnalysis(t, client, v1alpha1.AnalysisInternalFailure, nil)
 }
 
 func TestReconcileGitSourceAnalysisWithDifferentGitSourceName(t *testing.T) {
@@ -122,7 +121,7 @@ func TestReconcileGitSourceAnalysisWithDifferentGitSourceName(t *testing.T) {
 
 	//then
 	require.NoError(t, err)
-	assertGitSourceAnalysis(t, client, "Failed to fetch the input source", nil)
+	assertGitSourceAnalysis(t, client, v1alpha1.AnalysisInternalFailure, nil)
 }
 
 func TestReconcileGitSourceAnalysisWithDifferentSecretName(t *testing.T) {
@@ -141,7 +140,7 @@ func TestReconcileGitSourceAnalysisWithDifferentSecretName(t *testing.T) {
 
 	//then
 	require.NoError(t, err)
-	assertGitSourceAnalysis(t, client, "failed to fetch the secret object", nil)
+	assertGitSourceAnalysis(t, client, v1alpha1.AnalysisInternalFailure, nil)
 }
 
 func TestReconcileGitSourceAnalysisFromGitHubWithGivenToken(t *testing.T) {
@@ -169,6 +168,28 @@ func TestReconcileGitSourceAnalysisFromGitHubWithGivenToken(t *testing.T) {
 	}
 }
 
+func TestReconcileGitSourceAnalysisFromGitHubWithWrongToken(t *testing.T) {
+	//given
+	defer gock.OffAll()
+	gock.New("https://api.github.com").
+		Persist().
+		Reply(401)
+	secret := test.NewSecret(corev1.SecretTypeOpaque, map[string][]byte{"password": []byte("some-token")})
+	gs := test.NewGitSource(test.WithURL(repoGitHubURL))
+	gs.Spec.SecretRef = &v1alpha1.SecretRef{Name: test.SecretName}
+	gsa := test.NewGitSourceAnalysis(test.GitSourceName)
+	reconciler, request, client := PrepareClient(test.GitSourceAnalysisName,
+		test.RegisterGvkObject(v1alpha1.SchemeGroupVersion, gs, gsa),
+		test.RegisterGvkObject(corev1.SchemeGroupVersion, secret))
+
+	//when
+	_, err := reconciler.Reconcile(request)
+
+	//then
+	require.NoError(t, err)
+	assertGitSourceAnalysis(t, client, v1alpha1.DetectionFailed, test.S())
+}
+
 func TestReconcileGitSourceAnalysisFromCustomGit(t *testing.T) {
 	//given
 	defer gock.OffAll()
@@ -190,7 +211,7 @@ func TestReconcileGitSourceAnalysisFromCustomGit(t *testing.T) {
 
 		//then
 		require.NoError(t, err)
-		assertGitSourceAnalysis(t, client, "", test.S())
+		assertGitSourceAnalysis(t, client, v1alpha1.NotSupportedType, test.S())
 	}
 }
 
@@ -220,7 +241,7 @@ func TestReconcileGitSourceAnalysisFromLocalRepoWithSshKey(t *testing.T) {
 
 		//then
 		require.NoError(t, err)
-		assertGitSourceAnalysis(t, client, "", test.S())
+		assertGitSourceAnalysis(t, client, v1alpha1.NotSupportedType, test.S())
 	}
 }
 
@@ -251,19 +272,23 @@ func TestReconcileGitSourceAnalysisFromLocalRepoWithSshKeyWithPassphrase(t *test
 
 		//then
 		require.NoError(t, err)
-		assertGitSourceAnalysis(t, client, "", test.S())
+		assertGitSourceAnalysis(t, client, v1alpha1.NotSupportedType, test.S())
 	}
 }
 
-func assertGitSourceAnalysis(t *testing.T, client client.Client, errorMsg string, langs test.SliceOfStrings, buildTypes ...typeWithFiles) {
+func assertGitSourceAnalysis(t *testing.T, client client.Client, reason v1alpha1.AnalysisFailureReason,
+	langs test.SliceOfStrings, buildTypes ...typeWithFiles) {
+
 	gitSourceAnalysis := &v1alpha1.GitSourceAnalysis{}
 	err := client.Get(context.TODO(), newNamespacedName(test.Namespace, test.GitSourceAnalysisName), gitSourceAnalysis)
 	require.NoError(t, err)
 
-	if errorMsg != "" {
-		assert.Contains(t, gitSourceAnalysis.Status.Error, errorMsg)
+	if reason != "" {
+		assert.Equal(t, gitSourceAnalysis.Status.Reason, reason)
+		assert.NotEmpty(t, gitSourceAnalysis.Status.Error)
 	} else {
 		assert.Empty(t, gitSourceAnalysis.Status.Error)
+		assert.Empty(t, gitSourceAnalysis.Status.Reason)
 	}
 
 	buildEnvStats := gitSourceAnalysis.Status.BuildEnvStatistics
