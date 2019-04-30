@@ -36,6 +36,18 @@ func TestIsReachableRealGHRepoWithDevelopBranch(t *testing.T) {
 	assert.Nil(t, validationErr)
 }
 
+func TestIsReachableRealGHRepoUrlEndingWithSlash(t *testing.T) {
+	// given
+	gitSource := test.NewGitSource(
+		test.WithURL("https://github.com/fabric8-services/fabric8-tenant/"))
+
+	// when
+	validationErr := connection.ValidateGitSource(logger, gitSource)
+
+	// then
+	assert.Nil(t, validationErr)
+}
+
 func TestIsReachableRealGLRepoWithNoBranchSet(t *testing.T) {
 	// given
 	gitSource := test.NewGitSource(test.WithURL("https://gitlab.com/matousjobanek/quarkus-knative"))

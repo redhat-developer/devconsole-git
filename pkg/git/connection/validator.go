@@ -35,6 +35,9 @@ func ValidateGitSource(log *log.GitSourceLogger, gitSource *v1alpha1.GitSource) 
 	}
 	client := &http.Client{}
 	path := endpoint.Path
+	if strings.HasSuffix(path, "/") {
+		path = path[:len(path)-1]
+	}
 	if !strings.HasSuffix(path, ".git") {
 		path += ".git"
 	}
