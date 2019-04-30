@@ -132,11 +132,11 @@ func getConnectionStatus(log *gslog.GitSourceLogger, client client.Client, names
 	return NewConnection("", "", v1alpha1.OK)
 }
 
-func NewFailedConnection(validationError *connection.ValidationError) v1alpha1.Connection {
+func NewFailedConnection(validationError connection.ValidationError) v1alpha1.Connection {
 	return v1alpha1.Connection{
-		Error:  validationError.Message,
+		Error:  validationError.Error(),
 		State:  v1alpha1.Failed,
-		Reason: validationError.Reason,
+		Reason: validationError.Reason(),
 	}
 }
 

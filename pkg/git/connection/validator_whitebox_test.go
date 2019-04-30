@@ -27,7 +27,7 @@ func TestGenericGitUsingSshAccessingGitHub(t *testing.T) {
 	validationError := validateGitSourceWithSecret(logger, ghSource, git.NewSecretProvider(nil), allButGh)
 
 	// then
-	require.Nil(t, validationError)
+	require.NoError(t, validationError)
 }
 
 func TestGenericGitUsingSshAccessingGitLab(t *testing.T) {
@@ -42,5 +42,5 @@ func TestGenericGitUsingSshAccessingGitLab(t *testing.T) {
 	validationError := validateGitSourceWithSecret(logger, ghSource, git.NewSecretProvider(nil), allButGl)
 
 	// then
-	require.Nil(t, validationError)
+	require.NoError(t, validationError)
 }
