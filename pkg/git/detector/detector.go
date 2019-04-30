@@ -41,7 +41,7 @@ func detectBuildEnvs(log *log.GitSourceLogger,
 		return nil, err
 	}
 	if service == nil {
-		return &v1alpha1.BuildEnvStats{}, nil
+		return nil, nil
 	}
 	return detectBuildEnvsUsingService(service)
 }
